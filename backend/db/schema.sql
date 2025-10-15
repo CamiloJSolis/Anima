@@ -42,3 +42,15 @@ CREATE TABLE IF NOT exists error_logs (
     query JSONB -- Querystring
 );
 
+CREATE TABLE IF NOT EXISTS linked_accounts (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  provider VARCHAR(30) NOT NULL,            -- 'spotify'
+  provider_user_id TEXT NOT NULL,
+  access_token TEXT,
+  refresh_token TEXT,
+  scope TEXT,
+  expires_at TIMESTAMPTZ,
+  UNIQUE(user_id, provider),
+  UNIQUE(provider, provider_user_id)
+);

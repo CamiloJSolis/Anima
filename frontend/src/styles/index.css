@@ -1,0 +1,27 @@
+/* Estilos base para que el front muestre algo */
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background-color: #f7f9fb;
+  color: #222;
+}
+
+h1 {
+  color: #2a4d9b;
+  text-align: center;
+  margin-top: 2rem;
+}
+
+nav {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem;
+}
+a {
+  text-decoration: none;
+  color: #2a4d9b;
+}
+a:hover {
+  text-decoration: underline;
+}

@@ -1,25 +1,23 @@
 {
   "name": "anima-monorepo",
   "version": "1.0.0",
-  "description": "Monorepo for Ánima",
   "private": true,
   "workspaces": [
     "backend",
     "frontend"
   ],
   "scripts": {
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "start:dev": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
-    "start:backend": "cd backend && npm start",
-    "start:frontend": "cd frontend && npm start",
-    "build": "cd frontend && npm run build",
-    "test": "cd backend && npm test && cd ../frontend && npm test",
-    "lint": "cd backend && npm run lint && cd ../frontend && npm run lint",
-    "migrate": "cd backend && npm run migrate"
+    "install:all": "npm install && npm install -w backend && npm install -w frontend",
+    "start:dev": "concurrently \"npm:backend\" \"npm:frontend\"",
+    "backend": "npm run start -w backend",
+    "frontend": "cd frontend && npm run dev",
+    "build": "npm run build -w frontend",
+    "test": "npm test -w backend && npm test -w frontend",
+    "lint": "npm run lint -w backend && npm run lint -w frontend",
+    "migrate": "npm run migrate -w backend"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
-  },
-  "keywords": ["react", "express", "postgres", "mongodb", "spotify", "aws-rekognition"],
-  "license": "MIT"
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.1.10"
+  }
 }
