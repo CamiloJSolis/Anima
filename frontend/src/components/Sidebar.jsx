@@ -35,9 +35,6 @@ const Sidebar = () => {
         <Link to="/" className="icon">
           <UserRound />
         </Link>
-        <Link to="/login" className="icon" title="Iniciar Sesión">
-          <LogIn />
-        </Link>
       </div>
     </nav>
   );
