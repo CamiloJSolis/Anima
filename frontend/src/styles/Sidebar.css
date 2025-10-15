@@ -1,0 +1,56 @@
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 64px; /* w-16 equivalente */
+  background: linear-gradient(to bottom, #9333ea, #4f46e5); /* Gradiente púrpura a índigo */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 24px; /* py-6 */
+  padding-bottom: 24px;
+  gap: 32px; /* space-y-8 para el logo y nav */
+  z-index: 50;
+  color: white;
+}
+
+.logo {
+  flex-shrink: 0;
+}
+
+.nav-icons {
+  display: flex;
+  flex-direction: column;
+  gap: 24px; /* space-y-6 */
+}
+
+.icon {
+  padding: 8px; /* p-2 */
+  border-radius: 8px; /* rounded-lg */
+  color: white;
+  transition: background-color 0.3s ease, opacity 0.3s ease; /* transition-colors */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon:hover {
+  background-color: rgba(255, 255, 255, 0.2); /* hover:bg-white hover:bg-opacity-20 */
+  opacity: 0.9;
+}
+
+/* Para mobile/responsive, si querés agregar */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .nav-icons {
+    flex-direction: row;
+  }
+}

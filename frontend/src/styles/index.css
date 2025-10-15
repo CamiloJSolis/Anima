@@ -1,27 +1,309 @@
-/* Estilos base para que el front muestre algo */
+/* Paleta oficial de la app*/
+@import './Aurora.css';
+
+:root {
+  --bg-primary: #000011;
+  --bg-secondary: #191970;
+  --accent-violet: #8A2BE2;
+  --accent-blue: #00BFFF;
+  --accent-rose: #F8BBD9;
+  --accent-red: #ef4444;
+  --text-primary: #C0C0C0;
+  --text-gray: #9ca3af;
+  --font-family: 'Space Grotesk', sans-serif;
+}
+
 body {
+  font-family: var(--font-family);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  color: white;
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background-color: #f7f9fb;
-  color: #222;
-}
-
-h1 {
-  color: #2a4d9b;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav {
+  padding: 0;
   display: flex;
+  flex-direction: column;
+  min-height: 100vh; 
+}
+
+/* Sidebar Staggered */
+.sidebar {
+  width: 80px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 0;
+  height: 100vh;
+  border-right: 1px solid #374151;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  gap: 32px;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 48px;
+  color: var(--accent-violet);
+}
+
+.nav-icons {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  transform: skewY(-6deg); /* Efecto de inclinación */
+  transition: 0.3s ease;
+}
+
+.nav-icons:hover {
+  transform: skewY(-3deg); 
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  color: var(--text-gray);
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.icon:hover {
+  color: var(--accent-violet);
+}
+
+.btn-explore:hover {
+  background: var(--accent-blue);
+  box-shadow: 0 4px 12px rgba(0, 191, 255, 0.3);  /* Sombra azul */
+}
+
+/* Banner - Contraste con accent-blue para fondo y border */
+.banner {
+  background: rgba(0, 191, 255, 0.1); /* Azul para contraste suave */
+  border: 1px solid rgba(0, 191, 255, 0.3);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 1024px;
+  width: 100%;
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  margin: 0 auto; /* Centrar horizontalmente */
+}
+
+.illustration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.illustration-placeholder {
+  width: 128px;
+  height: 128px;
+  background: var(--accent-violet); /* Violet para contraste con banner azul */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 1rem;
-  margin: 1rem;
+  margin-bottom: 16px;
+  font-size: 32px;
+  position: relative;
 }
-a {
+
+.heart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 32px;
+  height: 32px;
+  background: rgba(248, 187, 217, 0.7); /* Rose para toque emocional contrastante */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: black;
+  font-size: 14px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--accent-violet); /* Violet para contraste con banner */
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.subtitle {
+  font-size: 18px;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.description {
+  color: var(--text-gray);
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.btn-explore {
+  background: var(--accent-blue); /* Azul para contraste con violet del título/ícono */
+  color: black;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  align-self: center;
+  margin: 0 auto;
+}
+
+.btn-explore:hover {
+  background: #0099CC; /* Tono más oscuro de azul para hover suave */
+}
+
+/* Footer */
+.footer {
+  background: var(--bg-primary);
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  font-size: 14px;
+  color: var(--text-gray);
+  box-sizing: border-box;
+}
+
+.footer-link {
+  color: var(--text-gray);
+  transition: color 0.2s;
   text-decoration: none;
-  color: #2a4d9b;
 }
-a:hover {
-  text-decoration: underline;
+
+.footer-link:hover {
+  color: var(--accent-violet);
+}
+
+.social-icons {
+  display: flex;
+  gap: 16px;
+}
+
+.social-btn {
+  padding: 8px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.social-btn:hover {
+  background: #374151;
+}
+
+/* Contenido Principal */
+.main-content {
+  margin-left: 80px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+  min-height: 0;
+}
+
+.banner-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+  .banner {
+    flex-direction: row;
+    gap: 32px;
+  }
+
+  .illustration {
+    width: 50%;  /* Mitad en desktop */
+  }
+
+  .btn-explore {
+    width: auto;  /* Auto en desktop */
+    align-self: center;
+  }
+}
+
+@media (max-width: 767px) {
+  .sidebar {
+    transform: translateX(-100%); /* Oculta en móvil */
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding-bottom: 80px;
+  }
+
+  .banner {
+    padding: 24px;
+    gap: 16px;
+  }
+
+  .btn-explore {
+    width: 100%;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .subtitle {
+    font-size: 16px;
+  }
+
+  .description {
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  .banner-container {
+    padding: 16px;
+  }
+
+  .footer {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .social-icons {
+    gap: 12px;
+  }
+
+  .social-btn {
+    padding: 6px;
+  }
 }
