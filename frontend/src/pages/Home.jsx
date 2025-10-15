@@ -1,6 +1,7 @@
 import React from 'react';
 import Aurora from '../components/Aurora.jsx';
-import { Music, Twitter, Instagram, Facebook } from 'lucide-react';  
+import { Music, Twitter, Instagram, Facebook } from 'lucide-react'; 
+import SongTicker from '../components/SongTicker.jsx'; // <--- CAMBIO 1: IMPORTAR EL NUEVO COMPONENTE
 
 const Home = () => {
   return (
@@ -8,7 +9,7 @@ const Home = () => {
       <Aurora 
         // colorStops={["#00FFFF", "#4B0082", "#20B2AA"]}
         // colorStops={["#FF00FF", "#FF1493", "#00CED1"]}
-         colorStops={["#8A2BE2", "#00BFFF", "#F8BBD9"]}
+          colorStops={["#8A2BE2", "#00BFFF", "#F8BBD9"]}
         blend={0.5}
         amplitude={1.0}
         speed={0.5}
@@ -52,6 +53,9 @@ const Home = () => {
             Términos y condiciones
           </a>
         </footer>
+        
+        <SongTicker /> {/* <--- CAMBIO 2: AÑADIR LA ETIQUETA AQUÍ */}
+
       </div>
     </div>
   );

@@ -1,18 +1,21 @@
 import React from 'react';
 import { Play, Edit3, MoreVertical } from 'lucide-react';
 import '../styles/Historial.css';
+import SongTicker from '../components/SongTicker.jsx';
+
+
 
 export default function Historial() {
   // Datos mock para playlists (reemplaza con fetch de backend)
   const playlists = [
-    { id: 1, title: 'Breathe Me', artist: 'Sia', thumbnail: '/breathe-me.jpg' },
-    { id: 2, title: 'Cinnamon Girl', artist: 'Lana Del Rey', thumbnail: '/cinnamon-girl.jpg' },
-    { id: 3, title: 'Country Song', artist: 'Miranda Lambert', thumbnail: '/country-song.jpg' },
-    { id: 4, title: 'Bad Guy', artist: 'Billie Eilish', thumbnail: '/bad-guy.jpg' },
-    { id: 5, title: 'Diamonds', artist: 'Rihanna', thumbnail: '/diamonds.jpg' },
-    { id: 6, title: 'Rap God', artist: 'Eminem', thumbnail: '/rap-god.jpg' },
-    { id: 7, title: 'Faded', artist: 'Alan Walker', thumbnail: '/faded.jpg' },
-    { id: 8, title: 'Country Song', artist: 'Miranda Lambert', thumbnail: '/country-song-2.jpg' },
+    { id: 1, title: 'Breathe Me', artist: 'Sia', thumbnail: 'sia.jpg' },
+    { id: 2, title: 'Cinnamon Girl', artist: 'Lana Del Rey', thumbnail: 'Cinnamon Girl.jpg' },
+    { id: 3, title: 'Country Song', artist: 'Miranda Lambert', thumbnail: 'Country Song.jpg' },
+    { id: 4, title: 'Bad Guy', artist: 'Billie Eilish', thumbnail: 'Bad Guy.jpg' },
+    { id: 5, title: 'Diamonds', artist: 'Rihanna', thumbnail: 'Diamonds.jpg' },
+    { id: 6, title: 'Rap God', artist: 'Eminem', thumbnail: '/placeholder.jpg' },
+    { id: 7, title: 'Faded', artist: 'Alan Walker', thumbnail: 'Faded.jpg' },
+    { id: 8, title: 'Country Song', artist: 'Miranda Lambert', thumbnail: 'CountrySonggg.jpg' },
   ];
 
   return (
