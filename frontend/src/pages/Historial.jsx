@@ -1,11 +1,25 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Play, Edit3, MoreVertical } from 'lucide-react';
 import '../styles/Historial.css';
 import SongTicker from '../components/SongTicker.jsx';
+import { api } from '../services/api';
 
+export default function Historial({ user: userProp = null }) {
+  const [user, setUser] = useState(userProp);
 
+  useEffect(() => {
+    if (!userProp) {
+      api.get('/auth/me')
+        .then(res => setUser(res.data?.user || null))
+        .catch(() => setUser(null));
+    }
+  }, [userProp]);
 
-export default function Historial() {
+  const displayName =
+    (user?.username && user.username.trim()) ||
+    (user?.name && user.name.trim()) ||
+    (user?.email ? user.email.split('@')[0] : 'invitado');
+
   // Datos mock para playlists (reemplaza con fetch de backend)
   const playlists = [
     { id: 1, title: 'Breathe Me', artist: 'Sia', thumbnail: 'sia.jpg' },
@@ -23,7 +37,7 @@ export default function Historial() {
       {/* Header */}
       <header className="historial-header">
         <div className="header-content">
-          <h1 className="welcome-title">¡Hola, usuario!</h1>
+          <h1 className="welcome-title">¡Hola, {displayName}!</h1>
           <p className="welcome-text">Bienvenido a tus Playlists</p>
         </div>
       </header>

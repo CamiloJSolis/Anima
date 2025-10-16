@@ -38,11 +38,6 @@ const Home = () => {
             </div>
           </div>
         </main>
-
-        <footer className="footer" style={{ zIndex: 10, position: 'relative' }}>
-          <a href="/terms" className="footer-link">Términos y condiciones</a>
-        </footer>
-
          <SongTicker /> 
          
       </div>

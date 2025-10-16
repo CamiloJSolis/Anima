@@ -166,18 +166,6 @@ export default function Login() {
             {mode === 'login' ? ' Regístrate' : ' Inicia sesión'}
           </Link>
         </p>
-
-        <div className="social-login">
-          <button className="social-button facebook" aria-label="Facebook">
-            <Facebook size={20} />
-          </button>
-          <button className="social-button instagram" aria-label="Instagram">
-            <Instagram size={20} />
-          </button>
-          <button className="social-button twitter" aria-label="Twitter">
-            <Twitter size={20} />
-          </button>
-        </div>
       </div>
     </div>
   );

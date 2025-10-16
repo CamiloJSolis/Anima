@@ -11,6 +11,7 @@ function signToken(payload){
 }
 
 router.post('/register',
+  body('username').notEmpty(),
   body('email').isEmail(),
   body('password').isLength({ min: 8 }),
   async (req,res,next)=>{
@@ -18,18 +19,18 @@ router.post('/register',
       const errors = validationResult(req);
       if(!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-      const { email, password } = req.body;
+      const { username, email, password } = req.body;
       const exists = await pool.query('SELECT 1 FROM users WHERE email=$1',[email]);
       if(exists.rowCount) return res.status(409).json({ error: 'Email en uso' });
 
       const hash = await bcrypt.hash(password, 12);
       const { rows } = await pool.query(
-        `INSERT INTO users(email,password_hash) VALUES($1,$2)
-         RETURNING user_id,email`,
-        [email, hash]
+        `INSERT INTO users(username,email,password_hash) VALUES($1,$2,$3)
+         RETURNING user_id,username,email`,
+        [username, email, hash]
       );
       const user = rows[0];
-      const token = signToken({ user_id: user.user_id, email: user.email });
+      const token = signToken({ user_id: user.user_id, email: user.email, username: user.username });
       res.cookie('token', token, {
         httpOnly: true, sameSite: 'lax', secure: process.env.COOKIE_SECURE === 'true'
       });
@@ -46,18 +47,18 @@ router.post('/login',
       const { email, password } = req.body;
       const { rows } = await pool.query('SELECT * FROM users WHERE email=$1',[email]);
       const user = rows[0];
-      if(!user) return res.status(401).json({ error: 'Credenciales' });
+      if(!user) return res.status(401).json({ error: 'Email o contraseña incorrectos' });
 
       const ok = await bcrypt.compare(password, user.password_hash);
-      if(!ok) return res.status(401).json({ error: 'Credenciales' });
+      if(!ok) return res.status(401).json({ error: 'Credenciales incorrectas' });
 
       await pool.query('UPDATE users SET last_login=NOW() WHERE user_id=$1',[user.user_id]);
 
-      const token = signToken({ user_id: user.user_id, email: user.email });
+      const token = signToken({ user_id: user.user_id, email: user.email, username: user.username });
       res.cookie('token', token, {
         httpOnly: true, sameSite: 'lax', secure: process.env.COOKIE_SECURE === 'true'
       });
-      res.json({ user: { user_id: user.user_id, email: user.email }});
+      res.json({ user: { user_id: user.user_id, email: user.email, name: user.username}});
     }catch(e){ next(e); }
   }
 );
@@ -72,7 +73,7 @@ router.get('/me', (req,res)=>{
   if(!token) return res.json({ user:null });
   try{
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({ user:{ id: payload.user_id, email: payload.email }});
+    res.json({ user:{ id: payload.user_id, email: payload.email, name: payload.username  }});
   }catch{ res.json({ user:null }); }
 });
 
