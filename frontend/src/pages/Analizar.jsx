@@ -1,22 +1,41 @@
-// export default Analyze;
 import React from 'react';
-import { UploadCloud, Camera } from 'lucide-react';
+import { Camera, UploadCloud, User, LogIn } from 'lucide-react'; // Agrega User y LogIn
+import { Link } from 'react-router-dom'; // Para enlace a login
 import '../styles/Analizar.css';
 
-const Analyze = () => {
+const Analyze = ({ user }) => { // user opcional: null para guest
+  const isLoggedIn = !!user && user.name && user.name !== 'usuario'; // Detecta logged in
+  const displayName = isLoggedIn ? user.name : 'invitado';
+  const avatarSrc = isLoggedIn && user.avatar ? user.avatar : null;
+
   return (
     <div className="analyze-layout">
-      {/* Header de Bienvenida (barra superior como en la foto) */}
       <header className="analyze-header">
         <div className="header-content">
           <div className="welcome-section">
-            <h1 className="welcome-title">¡Hola, usuario!</h1>
-            <p className="welcome-text">Bienvenido a Ánima </p>  {/* ★ como en la imagen */}
+            <h1 className="welcome-title">¡Hola, {displayName}!</h1>
+            <p className="welcome-text">Bienvenido a Ánima</p>
+          </div>
+          <div className="user-section">
+            {isLoggedIn ? (
+              <>
+                <img 
+                  src={avatarSrc || '/default-avatar.png'}
+                  alt={displayName}
+                  className="user-avatar"
+                />
+                <span className="user-name">{displayName}</span>
+              </>
+            ) : (
+              <Link to="/login" className="guest-login">
+                <LogIn size={20} className="login-icon" />
+                <span className="login-text">Iniciar Sesión</span>
+              </Link>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Área Central: Box de Análisis */}
       <main className="analyze-main">
         <div className="analyze-box">
           <UploadCloud className="cloud-icon" />

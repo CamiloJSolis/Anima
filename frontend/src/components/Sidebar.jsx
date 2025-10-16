@@ -1,5 +1,5 @@
 import React from 'react';
-import { House, Folder, Camera, UserRound, LogIn } from 'lucide-react';
+import { House, Music, Camera, UserRound, LogIn } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import '../styles/Sidebar.css'; 
 
@@ -30,13 +30,10 @@ const Sidebar = () => {
           <Camera />
         </Link>
         <Link to="/historial" className="icon">
-          <Folder />
+          <Music />
         </Link>
         <Link to="/" className="icon">
           <UserRound />
-        </Link>
-        <Link to="/login" className="icon" title="Iniciar Sesión">
-          <LogIn />
         </Link>
       </div>
     </nav>
