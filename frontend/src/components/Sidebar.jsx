@@ -32,7 +32,7 @@ const Sidebar = () => {
         <Link to="/historial" className="icon">
           <Music />
         </Link>
-        <Link to="/" className="icon">
+        <Link to="/login" className="icon">
           <UserRound />
         </Link>
       </div>
