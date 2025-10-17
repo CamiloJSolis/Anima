@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Aurora from '../components/Aurora.jsx';
-import { Music, Twitter, Instagram, Facebook } from 'lucide-react';  
+import SongTicker from '../components/SongTicker.jsx';
+import { Music } from 'lucide-react';  
 
 const Home = () => {
   return (
@@ -37,16 +38,7 @@ const Home = () => {
             </div>
           </div>
         </main>
-
-        <footer className="footer" style={{ zIndex: 10, position: 'relative' }}>
-          <a href="/privacy" className="footer-link">Privacidad y políticas del sitio</a>
-          <div className="social-icons">
-            <button className="social-btn"><Twitter size={20}/></button>
-            <button className="social-btn"><Instagram size={20}/></button>
-            <button className="social-btn"><Facebook size={20}/></button>
-          </div>
-          <a href="/terms" className="footer-link">Términos y condiciones</a>
-        </footer>
+        <SongTicker />
       </div>
     </div>
   );
