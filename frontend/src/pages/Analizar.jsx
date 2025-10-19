@@ -28,7 +28,7 @@ const Analyze = ({ user }) => {
         photo: selectedFile,  // Usa la foto subida
         playlist: {
           title: 'Happy Vibes',
-          thumbnail: '/happy-vibes.jpg',  // Placeholder o de Spotify
+          thumbnail: '../public/happy-vibes.jpg',  // Placeholder o de Spotify
           generatedBy: 'Ánima',
           songs: ['Song 1 - Artist 1', 'Song 2 - Artist 2']
         },
@@ -36,6 +36,10 @@ const Analyze = ({ user }) => {
           { emotion: 'Happiness', percentage: 85 },
           { emotion: 'Surprise', percentage: 9 },
           { emotion: 'Calm', percentage: 6 }
+        ],
+        suggestions: [
+          { title: 'Uplifting Beats', genre: 'Electronic', thumbnail: '/uplifting-beats.jpg' },
+          { title: 'Feel Good Indie', genre: 'Indie Rock', thumbnail: '/feel-good-indie.jpg' }
         ]
       };
       setAnalysisResult(mockResult);
@@ -137,7 +141,7 @@ const Analyze = ({ user }) => {
                 {/* Columna derecha: Playlist y Start Over */}
                 <div className="results-right">
                   <h3 className="playlist-title">Tu Playlist {analysisResult.emotion.charAt(0).toUpperCase() + analysisResult.emotion.slice(1)} </h3>
-                  <div className="playlist-card">
+                  <div className="analyze-playlist-card">
                     <div className="playlist-header">
                       <img src={analysisResult.playlist.thumbnail} alt="Playlist" className="playlist-thumbnail" />
                       <div className="playlist-info">
@@ -157,6 +161,33 @@ const Analyze = ({ user }) => {
                       </button>
                     </div>
                   </div>
+
+                  {/* Sección de sugerencias de playlists */}
+                  <div className="suggestions-section">
+                    <h4 className="suggestions-title">Más Sugerencias</h4>
+                    <div className="suggestions-list">
+                      {analysisResult.suggestions.map((suggestion, index) => (
+                        <div key={index} className="suggestion-item">
+                          <div className="suggestion-header">
+                            <img src={suggestion.thumbnail} alt={suggestion.title} className="suggestion-thumbnail" />
+                            <div className="suggestion-info">
+                              <p className="suggestion-name">{suggestion.title}</p>
+                              <p className="suggestion-genre">{suggestion.genre}</p>
+                            </div>
+                          </div>
+                          <div className="suggestion-actions">
+                            <button className="suggestion-play-button">
+                              <Play size={16} />
+                            </button>
+                            <button className="suggestion-share-button">
+                              <Share2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="start-over-section">
                     <button className="start-over-button" onClick={handleNewAnalysis}>
                       Inicia un nuevo análisis
