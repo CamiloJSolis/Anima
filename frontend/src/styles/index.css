@@ -14,7 +14,7 @@
 }
 
 body {
-  font-family: var(--font-family);
+ font-family: var(--font-family);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   color: white;
@@ -23,15 +23,16 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh; 
+  overflow-x: hidden; 
 }
 
 /* Sidebar */
 .sidebar {
-  width: 80px;
+ width: 80px;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(10px);
   display: flex;
-  flex-direction: column;
+ flex-direction: column;
   align-items: center;
   padding: 32px 0;
   height: 100vh;
@@ -39,9 +40,9 @@ body {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 100;
+  z-index: 1000; /* ¡CRÍTICO! Aumentado para asegurar que los clics funcionen */
   gap: 32px;
-  transition: all 0.3s ease;
+   transition: all 0.3s ease;
 }
 
 .logo {
@@ -230,14 +231,17 @@ body {
 
 /* Contenido Principal */
 .main-content {
-  margin-left: 80px;
+  margin-left: 80px; 
   flex: 1;
   display: flex;
   flex-direction: column;
   margin-bottom: 0;
   min-height: 0;
   transition: margin-left 0.3s ease;
-  width: calc(100%, 80px);
+  
+  width: calc(100% - 80px); 
+
+  min-width: 0; 
 }
 
 .banner-container {
@@ -359,3 +363,4 @@ body {
     padding: 6px;
   }
 }
+
