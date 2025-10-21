@@ -67,13 +67,28 @@ router.post('/logout', (req,res)=>{
   res.json({ ok:true });
 });
 
-router.get('/me', (req,res)=>{
+router.get('/me', async (req,res)=>{
   const token = req.cookies?.token;
   if(!token) return res.json({ user:null });
   try{
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({ user:{ id: payload.user_id, email: payload.email }});
-  }catch{ res.json({ user:null }); }
+// intentar leer username/email desde la BD para devolver un "name" legible
+    const userId = payload.user_id;
+    if (!userId) return res.json({ user:null });
+
+    const { rows } = await pool.query('SELECT username, email FROM users WHERE user_id=$1', [userId]);
+    const row = rows[0];
+    if (!row) return res.json({ user:null });
+
+    const name = row.username && row.username.trim() !== '' 
+      ? row.username 
+      : (row.email ? row.email.split('@')[0] : null);
+
+    res.json({ user:{ id: userId, email: row.email, name }});
+  }catch(err){
+    console.log('[auth.me] verify error:', err?.message || err);
+    res.json({ user:null });
+  }
 });
 
 export default router;

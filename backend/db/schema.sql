@@ -1,7 +1,10 @@
+-- ...existing code...
 DROP TABLE IF EXISTS users CASCADE;
-DROP TABLE IF EXISTS emotions CASCADE;
+DROP TABLE IF EXISTS emotions;
 DROP TABLE IF EXISTS user_emotions CASCADE;
 DROP TABLE IF EXISTS error_logs;
+DROP TABLE IF EXISTS linked_accounts CASCADE;
+DROP TABLE IF EXISTS analysis_history CASCADE;
 
 CREATE TABLE IF NOT EXISTS users (
   user_id SERIAL PRIMARY KEY,
@@ -27,7 +30,7 @@ CREATE TABLE IF NOT EXISTS user_emotions (
 );
 
 -- 4. Auditoria y debugging
-CREATE TABLE IF NOT exists error_logs (
+CREATE TABLE IF NOT EXISTS error_logs (
     error_log_id BIGSERIAL PRIMARY KEY,
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), -- Momento del error
     method VARCHAR(10), -- GET/POST/PUT/DELETE
@@ -54,3 +57,28 @@ CREATE TABLE IF NOT EXISTS linked_accounts (
   UNIQUE(user_id, provider),
   UNIQUE(provider, provider_user_id)
 );
+
+-- Historial final de análisis (Rekognition + Spotify)
+CREATE TABLE IF NOT EXISTS analysis_history (
+    analysis_id BIGSERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    -- Resultado del Análisis de Emoción
+    emotion_id INTEGER REFERENCES emotions(emotion_id) ON DELETE RESTRICT NOT NULL,
+    confidence DECIMAL(5,4) NOT NULL CHECK (confidence BETWEEN 0 AND 1),
+    -- Resultado de la integración con Spotify
+    playlist_id VARCHAR(50) NOT NULL,
+    playlist_url TEXT NOT NULL,
+    -- Metadatos
+    analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Precarga de las emociones estándar detectadas por AWS Rekognition
+INSERT INTO emotions (emotion) VALUES 
+('HAPPY'), 
+('SAD'), 
+('ANGRY'), 
+('FEAR'),
+('SURPRISE'), 
+('CALM'), 
+('CONFUSED'), 
+('DISGUST');

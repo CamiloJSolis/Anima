@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes.js';
+import analyzeRoutes from './routes/analyze.routes.js';
 
 const app = express();
 app.use(helmet());
@@ -17,6 +18,7 @@ app.use(cookieParser());
 app.get('/health', (req,res)=>res.json({ ok:true }));
 
 app.use('/auth', authRoutes);
+app.use('/api', analyzeRoutes); 
 
 // logger de errores para ver el 500
 app.use((err, req, res, next) => {
