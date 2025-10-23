@@ -29,7 +29,7 @@ export default function Historial({ user: userProp = null }) {
     { id: 5, title: 'Diamonds', artist: 'Rihanna', thumbnail: 'Diamonds.jpg' },
     { id: 6, title: 'Rap God', artist: 'Eminem', thumbnail: '/placeholder.jpg' },
     { id: 7, title: 'Faded', artist: 'Alan Walker', thumbnail: 'Faded.jpg' },
-    { id: 8, title: 'Country Song', artist: 'Miranda Lambert', thumbnail: 'CountrySonggg.jpg' },
+    { id: 8, title: 'Country Song', artist: 'Miranda Lambert', thumbnail: 'Country Song.jpg' },
   ];
 
   return (
