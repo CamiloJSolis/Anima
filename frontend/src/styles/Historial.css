@@ -1,4 +1,4 @@
-/* Variables de la paleta oficial */
+
 :root {
   --bg-primary: #000011;
   --bg-secondary: #191970;
@@ -19,8 +19,12 @@
   font-family: var(--font-family);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   position: relative;
+
+
+  margin-left: 80px;
+  width: calc(100% - 80px);
+  box-sizing: border-box; 
 }
 
 /* Header */
@@ -32,8 +36,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  margin-left: 80px;
-  width: calc(100% - 80px);
+    
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -72,22 +75,18 @@
   margin: 0;
 }
 
-/* Main */
 .historial-main {
   flex: 1;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 40px 24px;
-  margin-left: 80px;
-  width: calc(100% - 80px);
+  min-width: 0; 
+  padding: 40px 24px; 
   box-sizing: border-box;
-  overflow-y: auto;
+  overflow-y: auto; 
 }
 
 .historial-section {
   width: 100%;
   max-width: 1200px;
+  margin: 0 auto; 
 }
 
 .section-title {
@@ -207,17 +206,25 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-  .historial-header {
+
+
+  .historial-layout {
     margin-left: 0;
     width: 100%;
+    padding-bottom: 100px; 
   }
+
+
 
   .historial-main {
-    margin-left: 0;
-    width: 100%;
-    padding: 20px 16px;
+    flex: 1;
+    min-width: 0; 
+    padding: 24px 16px; 
+    box-sizing: border-box;
+    overflow-y: auto; 
   }
 
+ 
   .playlists-grid {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 16px;
@@ -230,4 +237,5 @@
   .section-title {
     font-size: 20px;
   }
+
 }

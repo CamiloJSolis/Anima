@@ -10,13 +10,15 @@ function App() {
   return (
     <Router>
       <div className="flex h-screen">
-        <Sidebar />  {/* Siempre visible */}
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/analizar" element={<Analizar />} />
-          <Route path="/historial" element={<Historial />} />
-          <Route path="/login" element={<Login />} />
-        </Routes>
+        <Sidebar />
+        <main className="main-content flex-1 overflow-auto">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/analizar" element={<Analizar />} />
+            <Route path="/historial" element={<Historial />} />
+            <Route path="/login" element={<Login />} />
+          </Routes>
+        </main>
       </div>
     </Router>
   );

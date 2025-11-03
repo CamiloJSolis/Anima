@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Facebook, Instagram, Twitter, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Lock, Eye, EyeOff, Facebook, Instagram, Twitter, User, Link as LinkIcon, LogIn } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import '../styles/Login.css';
@@ -14,13 +14,20 @@ export default function Login() {
   const [showConfirm, setShowConfirm] = useState(false);      // NEW
   const [error, setError] = useState(null);
 
+  // Detecta si ya hay sesión activa (para mostrar "Vincular Spotify")
+  const [authedUser, setAuthedUser] = useState(null);
+  useEffect(() => {
+    api.get('/auth/me')
+      .then(res => setAuthedUser(res.data?.user || null))
+      .catch(() => setAuthedUser(null));
+  }, []);
+
   async function submit(e) {
     e.preventDefault();
     setError(null);
 
     try {
       if (mode === 'register') {
-        // Validaciones rápidas en frontend
         if (username.trim().length < 3) {
           setError('El usuario debe tener al menos 3 caracteres');
           return;
@@ -42,7 +49,7 @@ export default function Login() {
           : { username, email, password, confirmPassword };
 
       await api.post(url, payload);
-      window.location.href = '/';
+      window.location.href = '/'; // o /analizar si prefieres
     } catch (err) {
       const msg =
         err.response?.data?.error ||
@@ -52,9 +59,22 @@ export default function Login() {
     }
   }
 
-  function linkSpotify() {
-    window.location.href = 'http://localhost:4000/auth/spotify/start';
+  // Spotify: usa 127.0.0.1 (no localhost)
+  const SPOTIFY_BASE = 'http://127.0.0.1:4000/auth/spotify';
+
+  // Login con Spotify (no requiere sesión previa)
+  function spotifyContinue() {
+    window.location.href = `${SPOTIFY_BASE}/start`;
   }
+
+  // Vincular Spotify (requiere estar logueado en tu app)
+  function spotifyLink() {
+    window.location.href = `${SPOTIFY_BASE}/start?link=1`;
+  }
+
+  const displayName =
+    (authedUser?.username && authedUser.username) ||
+    (authedUser?.email ? authedUser.email.split('@')[0] : null);
 
   return (
     <div className="login-layout">
@@ -63,6 +83,14 @@ export default function Login() {
         <p className="login-subtitle">
           Coloca tus datos para {mode === 'login' ? 'iniciar sesión' : 'crear cuenta'}
         </p>
+
+        {/* Aviso si ya tienes sesión activa */}
+        {authedUser && (
+          <div className="authed-banner">
+            <LogIn size={16} />
+            <span>Ya iniciaste sesión como <strong>@{displayName}</strong></span>
+          </div>
+        )}
 
         <form onSubmit={submit} className="login-form">
           {mode === 'register' && (
@@ -146,10 +174,18 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="spotify-link">
-          <button onClick={linkSpotify} className="spotify-button">
-            Vincular o entrar con Spotify
-          </button>
+        {/* Zona Spotify */}
+        <div className="spotify-actions">
+          {!authedUser ? (
+            <button onClick={spotifyContinue} className="spotify-button">
+              Continuar con Spotify
+            </button>
+          ) : (
+            <button onClick={spotifyLink} className="spotify-button link-mode">
+              <LinkIcon size={18} />
+              <span>Vincular Spotify a mi cuenta</span>
+            </button>
+          )}
         </div>
 
         <p className="register-link">
@@ -167,6 +203,7 @@ export default function Login() {
           </Link>
         </p>
 
+        {/* Íconos Sociales (solo decorativos) */}
         <div className="social-login">
           <button className="social-button facebook" aria-label="Facebook">
             <Facebook size={20} />

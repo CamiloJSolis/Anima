@@ -14,7 +14,7 @@
 }
 
 body {
-  font-family: var(--font-family);
+ font-family: var(--font-family);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   color: white;
@@ -23,15 +23,16 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh; 
+  overflow-x: hidden; 
 }
 
-/* Sidebar Staggered */
+/* Sidebar */
 .sidebar {
-  width: 80px;
+ width: 80px;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(10px);
   display: flex;
-  flex-direction: column;
+ flex-direction: column;
   align-items: center;
   padding: 32px 0;
   height: 100vh;
@@ -39,8 +40,9 @@ body {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 100;
+  z-index: 1000; /* ¡CRÍTICO! Aumentado para asegurar que los clics funcionen */
   gap: 32px;
+   transition: all 0.3s ease;
 }
 
 .logo {
@@ -69,11 +71,18 @@ body {
   padding: 8px;
   border-radius: 4px;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color 0.2s, background-color 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
 }
 
 .icon:hover {
   color: var(--accent-violet);
+  background-color: rgba(255, 255, 255, 0.2);
+  opacity: 0.9;
+  transform: scale(1.1);
 }
 
 .btn-explore:hover {
@@ -81,7 +90,7 @@ body {
   box-shadow: 0 4px 12px rgba(0, 191, 255, 0.3);  /* Sombra azul */
 }
 
-/* Banner - Contraste con accent-blue para fondo y border */
+/* Banner */
 .banner {
   background: rgba(0, 191, 255, 0.1); /* Azul para contraste suave */
   border: 1px solid rgba(0, 191, 255, 0.3);
@@ -107,7 +116,7 @@ body {
 .illustration-placeholder {
   width: 128px;
   height: 128px;
-  background: var(--accent-violet); /* Violet para contraste con banner azul */
+  background: var(--accent-violet);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -123,7 +132,7 @@ body {
   right: -8px;
   width: 32px;
   height: 32px;
-  background: rgba(248, 187, 217, 0.7); /* Rose para toque emocional contrastante */
+  background: rgba(248, 187, 217, 0.7);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -136,7 +145,7 @@ body {
 .title {
   font-size: 24px;
   font-weight: bold;
-  color: var(--accent-violet); /* Violet para contraste con banner */
+  color: var(--accent-violet);
   margin-bottom: 8px;
   text-align: center;
 }
@@ -154,7 +163,7 @@ body {
 }
 
 .btn-explore {
-  background: var(--accent-blue); /* Azul para contraste con violet del título/ícono */
+  background: var(--accent-blue);
   color: black;
   padding: 12px 32px;
   border-radius: 8px;
@@ -171,7 +180,7 @@ body {
 }
 
 .btn-explore:hover {
-  background: #0099CC; /* Tono más oscuro de azul para hover suave */
+  background: #0099CC;
 }
 
 /* Footer */
@@ -214,7 +223,7 @@ body {
   border: none;
   cursor: pointer;
   transition: background 0.2s;
-}
+}/* Tono más oscuro de azul para hover suave */
 
 .social-btn:hover {
   background: #374151;
@@ -222,12 +231,17 @@ body {
 
 /* Contenido Principal */
 .main-content {
-  margin-left: 80px;
+  margin-left: 80px; 
   flex: 1;
   display: flex;
   flex-direction: column;
   margin-bottom: 0;
   min-height: 0;
+  transition: margin-left 0.3s ease;
+  
+  width: calc(100% - 80px); 
+
+  min-width: 0; 
 }
 
 .banner-container {
@@ -259,12 +273,54 @@ body {
 
 @media (max-width: 767px) {
   .sidebar {
-    transform: translateX(-100%); /* Oculta en móvil */
+    top: auto;
+    bottom: 0;
+    height: 80px; 
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    gap: 0;
+    background: rgba(0, 0, 0, 0.8);
+    border-right: none;
+    border-top: 1px solid #374151; 
+
+  }
+
+  .logo {
+    display: none;
+  }
+
+  .nav-icons {
+    flex-direction: row;
+    gap: 0;
+    justify-content: space-around;
+    transform: none;
+  }
+
+  .icon {
+    flex: 1;
+    padding: 12px;
+    margin: 0 8px;
+    border-radius: 12px;
+    width: auto;
+    height: auto;
+  }
+
+  .icon:hover,
+  .icon:active {
+    background-color: rgba(138, 43, 226, 0.5);
+    transform: scale(1.05);
+    color: white;
   }
 
   .main-content {
     margin-left: 0;
-    padding-bottom: 80px;
+    width: 100%;
+    padding-bottom: 100px;
   }
 
   .banner {
@@ -307,3 +363,4 @@ body {
     padding: 6px;
   }
 }
+
