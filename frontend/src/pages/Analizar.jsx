@@ -121,7 +121,7 @@ const Analyze = ({ user }) => {
 
       console.log('sending file', fileToSend.name, fileToSend.size);
 
-      const res = await api.post("/api/analyze", fd, {
+      const res = await api.post("/analyze", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

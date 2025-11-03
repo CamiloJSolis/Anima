@@ -84,4 +84,3 @@ router.post('/analyze', upload.single('photo'), async (req, res, next) => {
 });
 
 export default router;
-// ...existing code...
