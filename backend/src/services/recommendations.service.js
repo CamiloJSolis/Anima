@@ -1,98 +1,123 @@
-import { pool } from '../db/pool.js';
-import { getClientCredentialsToken, spotifyGet } from './spotify.service.js';
+// ...existing code...
+import { pool } from "../db/pool.js";
+import { getClientCredentialsToken, spotifyGet } from "./spotify.service.js";
 
 const EMOTION_SEEDS = {
-  HAPPY:   { seed_genres: ['pop','dance','happy'] },
-  SAD:  { seed_genres: ['sad','acoustic','piano'] },
-  ANGRY: { seed_genres: ['metal','rock','hard-rock'] },
-  SURPRISE:{ seed_genres: ['edm','electronic','indie'] },
-  FEAR:   { seed_genres: ['ambient','chill','classical'] },
-  DISGUST:{ seed_genres:['punk','grunge','alt-rock'] },
-  CALM: { seed_genres: ['lo-fi','chill','indie-pop'] }
+  HAPPY: { seed_genres: ["pop", "dance", "happy"] },
+  SAD: { seed_genres: ["sad", "acoustic", "piano"] },
+  ANGRY: { seed_genres: ["metal", "rock", "hard-rock"] },
+  SURPRISE: { seed_genres: ["edm", "electronic", "indie"] },
+  FEAR: { seed_genres: ["ambient", "chill", "classical"] },
+  DISGUST: { seed_genres: ["punk", "grunge", "alt-rock"] },
+  CALM: { seed_genres: ["lo-fi", "chill", "indie-pop"] },
 };
 
 function normalizeEmotion(e) {
-  return (e || '').toLowerCase();
+  return (e || "").toUpperCase();
 }
 
-export async function getRecommendationsForEmotion({ userId=null, emotion, count=20, market=process.env.SPOTIFY_MARKET || 'MX' }) {
-  const emo = normalizeEmotion(emotion);
-  const seeds = EMOTION_SEEDS[emo] || EMOTION_SEEDS['neutral'];
+export async function getRecommendationsForEmotion({
+  userId = null,
+  emotion,
+  count = 20,
+  market = process.env.SPOTIFY_MARKET || "MX",
+}) {
+  const emoKey = normalizeEmotion(emotion);
+  const seeds = EMOTION_SEEDS[emoKey] || EMOTION_SEEDS.CALM;
 
-  // token app-level (invitado o incluso logueado si no quieres tocar su cuenta)
-  const { access_token } = await getClientCredentialsToken();
+  const tokenResp = await getClientCredentialsToken();
+  const access_token = tokenResp?.access_token;
+  if (!access_token) {
+    throw new Error("[recommendations] no access_token from spotify (client credentials)");
+  }
 
-  // random offset para rotación (Spotify limita a 1000 en muchas búsquedas)
-  const offset = Math.floor(Math.random() * 200);
+  const offset = Math.floor(Math.random() * 1000);
 
-  // 1) Tracks usando Recommendations endpoint
-  // Simple: usa seed_genres; también podrías mezclar seed_artists/seed_tracks
-  const params = {
-    seed_genres: seeds.seed_genres.slice(0,5).join(','),
-    limit: count,
-    market
-  };
-  const rec = await spotifyGet('/recommendations', access_token, params);
-  let tracks = (rec.tracks || []).map(t => t.id);
+  let tracks = [];
 
-  // 2) Filtra contra memoria reciente del usuario (si hay userId)
+  try {
+    const q = `${(emotion || "").trim()} ${seeds.seed_genres.join(" ")}`.trim();
+    const search = await spotifyGet("/search", access_token, {
+      q,
+      type: "track",
+      market,
+      limit: count,
+      offset,
+    });
+    const items = search?.tracks?.items || [];
+    tracks = items.map((t) => ({
+      id: t.id,
+      name: t.name,
+      artists: (t.artists || []).map((a) => a.name),
+      preview_url: t.preview_url,
+      uri: t.uri,
+      external_url: t.external_urls?.spotify,
+      album: {
+        id: t.album?.id,
+        name: t.album?.name,
+        images: t.album?.images || [],
+      },
+    }));
+  } catch (err) {
+    console.error("[recommendations] search failed", err?.message || err);
+  }
+
+  // filtrar por memoria del usuario para tracks solamente
   if (userId && tracks.length) {
-    const { rows } = await pool.query(
-      `SELECT item_id FROM user_item_memory
-       WHERE user_id=$1 AND emotion=$2 AND item_type='track'
-       ORDER BY created_at DESC LIMIT 200`,
-      [userId, emo]
-    );
-    const seen = new Set(rows.map(r => r.item_id));
-    tracks = tracks.filter(id => !seen.has(id));
-    // si se vacía, permite algunas repetidas:
-    if (tracks.length < 5) {
-      tracks = (rec.tracks || []).map(t => t.id).slice(0, count);
+    try {
+      const { rows } = await pool.query(
+        `SELECT item_id FROM user_item_memory
+         WHERE user_id=$1 AND emotion=$2 AND item_type='track'
+         ORDER BY created_at DESC LIMIT 200`,
+        [userId, emoKey]
+      );
+      const seen = new Set(rows.map((r) => r.item_id));
+      tracks = tracks.filter((t) => !seen.has(t.id));
+    } catch (err) {
+      console.error("[recommendations] user memory filter failed", err?.message || err);
     }
   }
 
-  // 3) Playlists por emoción usando búsqueda
-  // Nota: Spotify no tiene "playlist recommendations" directas; hacemos una search por término
-  const q = `${emo} mood`;
-  const search = await spotifyGet('/search', access_token, {
-    q, type: 'playlist', market, limit: 10, offset
-  });
-  let playlists = (search.playlists?.items || []).map(p => p.id);
-
-  if (userId && playlists.length) {
-    const { rows } = await pool.query(
-      `SELECT item_id FROM user_item_memory
-       WHERE user_id=$1 AND emotion=$2 AND item_type='playlist'
-       ORDER BY created_at DESC LIMIT 100`,
-      [userId, emo]
-    );
-    const seen = new Set(rows.map(r => r.item_id));
-    playlists = playlists.filter(id => !seen.has(id));
-    if (playlists.length < 3) {
-      playlists = (search.playlists?.items || []).map(p => p.id);
-    }
-  }
-
-  return { tracks, playlists, seeds };
+  return { tracks: tracks.slice(0, count), seeds };
 }
 
-export async function persistRecommendationSession({ userId=null, emotion, confidence=null, tracks, playlists, seeds }) {
-  // Guarda sesión
+export async function persistRecommendationSession({
+  userId = null,
+  emotion,
+  confidence = null,
+  tracks,
+  seeds,
+}) {
+  const trackIds = Array.isArray(tracks)
+    ? tracks.map((t) => (typeof t === "string" ? t : t.id)).filter(Boolean)
+    : [];
+
   await pool.query(
-    `INSERT INTO recommendation_sessions(user_id, emotion, confidence, tracks, playlists, seed)
-     VALUES($1,$2,$3,$4,$5,$6)`,
-    [userId, emotion, confidence, tracks, playlists, seeds]
+    `INSERT INTO recommendation_sessions(user_id, emotion, confidence, tracks, seed)
+     VALUES($1,$2,$3,$4,$5)`,
+    [userId, emotion, confidence, trackIds, seeds]
   );
 
-  // Actualiza memoria (solo si userId)
-  if (userId) {
-    const trackValues = tracks.map(id => `(${userId}, '${emotion}', 'track', '${id}')`).join(',');
-    const plistValues = playlists.map(id => `(${userId}, '${emotion}', 'playlist', '${id}')`).join(',');
-    const sqls = [];
-    if (tracks.length) sqls.push(`INSERT INTO user_item_memory(user_id,emotion,item_type,item_id) VALUES ${trackValues}`);
-    if (playlists.length) sqls.push(`INSERT INTO user_item_memory(user_id,emotion,item_type,item_id) VALUES ${plistValues}`);
-    if (sqls.length) {
-      for (const s of sqls) await pool.query(s);
+  if (userId && trackIds.length) {
+    const inserts = [];
+    const params = [];
+    let idx = 1;
+
+    for (const id of trackIds) {
+      params.push(userId, emotion, "track", id);
+      inserts.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++})`);
+    }
+
+    if (inserts.length) {
+      const sql = `INSERT INTO user_item_memory(user_id, emotion, item_type, item_id) VALUES ${inserts.join(
+        ","
+      )}`;
+      try {
+        await pool.query(sql, params);
+      } catch (err) {
+        console.error("[recommendations] persist user_item_memory failed", err?.message || err);
+      }
     }
   }
 }
+// ...existing code...

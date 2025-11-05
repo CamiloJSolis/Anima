@@ -29,7 +29,7 @@ const Analyze = ({ user }) => {
     setSelectedFile(file);
     const url = URL.createObjectURL(file);
     setPreview(url);
-    console.log('selected file:', file.name, file.size);
+    console.log("selected file:", file.name, file.size);
   };
 
   // liberar URL creada al cambiar o desmontar
@@ -39,23 +39,23 @@ const Analyze = ({ user }) => {
     };
   }, [preview]);
 
-   // Redimensiona/comprime la imagen en el cliente antes de enviar
+  // Redimensiona/comprime la imagen en el cliente antes de enviar
   async function resizeImage(file, maxWidth = 1280, quality = 0.8) {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
         const scale = Math.min(1, maxWidth / img.width);
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         canvas.toBlob(
           (blob) => {
-            if (!blob) return reject(new Error('No blob generado'));
+            if (!blob) return reject(new Error("No blob generado"));
             resolve(blob);
           },
-          'image/jpeg',
+          "image/jpeg",
           quality
         );
       };
@@ -75,8 +75,69 @@ const Analyze = ({ user }) => {
       const emotion = emotionRaw ? emotionRaw.toLowerCase() : null;
       const confidence = dominant?.Confidence ?? null;
 
-      // Si tu backend también devuelve playlist generado por integra con Spotify:
-      const playlist = data.playlist || null;
+      // Construir playlist a partir de lo que envíe el backend:
+      // Prioridad: data.playlist (objeto), data.playlists[0], data.tracks -> generar playlist
+      let playlist = null;
+      if (data.playlist && typeof data.playlist === "object") {
+        playlist = {
+          title:
+            data.playlist.name ||
+            data.playlist.title ||
+            `${emotion ? emotion.toUpperCase() : "Playlist"}`,
+          thumbnail:
+            data.playlist.images?.[0]?.url ||
+            data.playlist.thumbnail ||
+            data.playlist.album?.images?.[0]?.url ||
+            null,
+          generatedBy: data.playlist.owner || "Ánima",
+          external_url:
+            data.playlist.external_url ||
+            data.playlist.external_urls?.spotify ||
+            null,
+          songs: Array.isArray(data.playlist.tracks)
+            ? data.playlist.tracks.map((t) => ({
+                id: t.id,
+                name: t.name,
+                artists: t.artists || [],
+                preview_url: t.preview_url || t.preview_url,
+                external_url:
+                  t.external_url || t.external_urls?.spotify || null,
+                album: t.album || {},
+              }))
+            : [],
+        };
+      } else if (Array.isArray(data.playlists) && data.playlists.length > 0) {
+        const p = data.playlists[0];
+        playlist = {
+          title:
+            p.name ||
+            p.title ||
+            `${emotion ? emotion.toUpperCase() : "Playlist"}`,
+          thumbnail: p.images?.[0]?.url || p.thumbnail || null,
+          generatedBy: p.owner || "Ánima",
+          external_url: p.external_url || p.external_urls?.spotify || null,
+          songs: [],
+        };
+      } else if (Array.isArray(data.tracks) && data.tracks.length > 0) {
+        // genera una "playlist" propia usando los tracks devueltos
+        playlist = {
+          title: `${emotion ? emotion.toUpperCase() : "Playlist"} Vibes`,
+          thumbnail:
+            data.tracks[0]?.album?.images?.[0]?.url ||
+            data.tracks[0]?.images?.[0]?.url ||
+            null,
+          generatedBy: "Ánima",
+          external_url: null,
+          songs: data.tracks.map((t) => ({
+            id: t.id,
+            name: t.name,
+            artists: t.artists || [],
+            preview_url: t.preview_url || null,
+            external_url: t.external_url || t.external_urls?.spotify || null,
+            album: t.album || {},
+          })),
+        };
+      }
 
       // breakdown: convierte emotions en formato porcentual (opcional)
       const breakdown = (data.emotions || []).map((e) => ({
@@ -104,28 +165,30 @@ const Analyze = ({ user }) => {
       breakdown: data.breakdown || [],
       suggestions: data.suggestions || [],
     };
-  };
+  }
 
   const handleAnalyze = async () => {
     if (!selectedFile) return;
     try {
-      console.log('original size', selectedFile.size);
+      console.log("original size", selectedFile.size);
       // intenta reducir a < 4.5MB (ajusta parámetros si es necesario)
       const resizedBlob = await resizeImage(selectedFile, 1280, 0.8);
-      console.log('resized size', resizedBlob.size);
+      console.log("resized size", resizedBlob.size);
 
-      const fileToSend = new File([resizedBlob], selectedFile.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+      const fileToSend = new File(
+        [resizedBlob],
+        selectedFile.name.replace(/\.[^.]+$/, ".jpg"),
+        { type: "image/jpeg" }
+      );
 
       const fd = new FormData();
-      fd.append('photo', fileToSend);
+      fd.append("photo", fileToSend);
 
-      console.log('sending file', fileToSend.name, fileToSend.size);
+      console.log("sending file", fileToSend.name, fileToSend.size);
 
-      const res = await api.post("/analyze", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await api.post("/api/analyze", fd);
 
-      console.log('analyze res', res.data);
+      console.log("analyze res", res.data);
 
       const normalized = normalizeAnalysisResponse(res.data, preview);
       setAnalysisResult(normalized);
@@ -182,20 +245,23 @@ const Analyze = ({ user }) => {
   // Valores seguros para evitar crashes si el backend no devuelve playlist/otros campos
   const safeResult = analysisResult || {};
   const displayPhoto = safeResult.photo || preview || "/placeholder.jpg";
-  const breakdown = Array.isArray(safeResult.breakdown) ? safeResult.breakdown : [];
+  const breakdown = Array.isArray(safeResult.breakdown)
+    ? safeResult.breakdown
+    : [];
   const playlist = safeResult.playlist || {
     thumbnail: "/placeholder.jpg",
     title: "Playlist no disponible",
     generatedBy: "Ánima",
     songs: [],
   };
-  const suggestions = Array.isArray(safeResult.suggestions) ? safeResult.suggestions : [];
+  const suggestions = Array.isArray(safeResult.suggestions)
+    ? safeResult.suggestions
+    : [];
   const emotionRaw = safeResult.emotion || "desconocida";
   const emotionCap =
     typeof emotionRaw === "string" && emotionRaw.length > 0
       ? emotionRaw.charAt(0).toUpperCase() + emotionRaw.slice(1)
       : emotionRaw;
-
 
   return (
     <div className="analyze-layout">
@@ -275,7 +341,7 @@ const Analyze = ({ user }) => {
                   <h2 className="results-title">Resultado del Análisis</h2>
                   <div className="photo-section">
                     <img
-                      src={analysisResult.photo}
+                      src={displayPhoto}
                       alt="Tu foto"
                       className="results-photo"
                     />
@@ -285,7 +351,7 @@ const Analyze = ({ user }) => {
                       Descripción del Análisis
                     </h3>
                     <div className="breakdown-bars">
-                      {analysisResult.breakdown.map((item, index) => (
+                      {breakdown.map((item, index) => (
                         <div
                           key={index}
                           className={`bar-item ${
@@ -314,35 +380,92 @@ const Analyze = ({ user }) => {
 
                 {/* Columna derecha: Playlist y Start Over */}
                 <div className="results-right">
-                  <h3 className="playlist-title">
-                    Tu Playlist{emotionCap}
-                  </h3>
-                  
-                  {/* Render condicional: solo mostrar card si existe playlist */}
-                  {playlist ? (
-                    <div className="analyze-playlist-card">
-                      <div className="playlist-header">
-                        <img
-                          src={playlist.thumbnail}
-                          alt="Playlist"
-                          className="playlist-thumbnail"
-                        />
-                        <div className="playlist-info">
-                          <p className="playlist-type">Playlist</p>
-                          <p className="playlist-name">{playlist.title}</p>
-                          <p className="playlist-generated">Generada por Ánima</p>
-                        </div>
-                      </div>
-                      <div className="playlist-actions">
-                        <button className="play-button">
-                          <Play size={20} />
-                          <span>Reproducir</span>
-                        </button>
-                        <button className="share-button">
-                          <Share2 size={20} />
-                          <span>Compartir</span>
-                        </button>
-                      </div>
+                  {/* Mostrar lista de canciones o mensaje si no hay */}
+                  {Array.isArray(playlist.songs) && playlist.songs.length > 0 ? (
+                    <div
+                      className="playlist-songlist"
+                      style={{ marginTop: "1rem" }}
+                    >
+                      <h4
+                        style={{
+                          margin: "0 0 0.5rem 0",
+                          color: "#C0C0C0",
+                        }}
+                      >
+                        Canciones
+                      </h4>
+                      <ul
+                        style={{
+                          listStyle: "none",
+                          padding: 0,
+                          margin: 0,
+                        }}
+                      >
+                        {playlist.songs.map((s, i) => (
+                          <li
+                            key={s.id || `${s.name}-${i}`}
+                            style={{
+                              display: "flex",
+                              gap: "0.75rem",
+                              alignItems: "center",
+                              padding: "0.5rem 0",
+                              borderBottom: "1px solid rgba(255,255,255,0.03)",
+                            }}
+                          >
+                            <img
+                              src={
+                                s.album?.images?.[0]?.url ||
+                                playlist.thumbnail ||
+                                "/placeholder.jpg"
+                              }
+                              alt={s.name}
+                              style={{
+                                width: 48,
+                                height: 48,
+                                objectFit: "cover",
+                                borderRadius: 6,
+                              }}
+                            />
+                            <div style={{ flex: 1 }}>
+                              <div
+                                style={{
+                                  fontWeight: 700,
+                                  color: "var(--text-primary)",
+                                }}
+                              >
+                                {s.name}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "var(--text-gray)",
+                                }}
+                              >
+                                {(s.artists || []).join(", ")}
+                              </div>
+                            </div>
+                            {s.preview_url ? (
+                              <audio
+                                controls
+                                src={s.preview_url}
+                                style={{ width: 120 }}
+                              />
+                            ) : s.external_url ? (
+                              <a
+                                href={s.external_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  color: "#00FFFF",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                Abrir
+                              </a>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   ) : (
                     <div className="analyze-playlist-card-empty">

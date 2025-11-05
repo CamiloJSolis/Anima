@@ -39,7 +39,6 @@ router.post('/', async (req, res, next) => {
       emotion,
       confidence: confidence ?? null,
       tracks,
-      playlists,
       seeds
     });
 

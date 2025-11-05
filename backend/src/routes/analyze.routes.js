@@ -4,6 +4,7 @@ import multer from 'multer';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db/pool.js';
 import { analyzeEmotion } from '../services/rekognition.service.js';
+import { getRecommendationsForEmotion } from '../services/recommendations.service.js'; // implementar si no existe
 
 const router = Router();
 const upload = multer({
@@ -24,6 +25,17 @@ router.post('/analyze', upload.single('photo'), async (req, res, next) => {
     console.log('[analyze] received file size:', req.file.size);
 
     const result = await analyzeEmotion(req.file.buffer);
+
+    // generar playlist usando el dominant emotion (si tienes recommendations.service)
+    let playlist = null;
+    try {
+      const dominant = result.dominantEmotion?.Type ?? null;
+      if (dominant) {
+        playlist = await getRecommendationsForEmotion(dominant); // debe devolver { title, thumbnail, tracks: [...] }
+      }
+    } catch (err) {
+      console.error('[analyze] recommendations error', err);
+    }
 
     // Determinar userId: preferir req.user (si existe), sino intentar leer token de cookie
     let userId = req.user?.user_id ?? null;
@@ -73,7 +85,7 @@ router.post('/analyze', upload.single('photo'), async (req, res, next) => {
       console.error('[analyze] db error:', dbErr);
     }
 
-    return res.json(result);
+    return res.json({...result, playlist});
   } catch (err) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(413).json({ error: 'Archivo demasiado grande (max 5 MB)' });

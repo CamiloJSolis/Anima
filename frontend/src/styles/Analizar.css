@@ -12,21 +12,28 @@
 }
 
 /* Aurora como fondo */
-.analyze-layout > * {
+.analyze-layout>* {
   position: relative;
   z-index: 2;
 }
 
 @keyframes auroraShift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 /* Main: Contenido principal con centrado */
 .analyze-main {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 40px 24px;
   /* margin-left: 64px;
@@ -54,6 +61,73 @@
   overflow: hidden;
 }
 
+/* Añadir/ajustar grid y responsive para resultados */
+.results-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* columna principal flexible + columna derecha limitada */
+  gap: 20px;
+  align-items: start;
+  max-width: 100%;
+  width: 100%;
+}
+
+/* Right column: tarjeta de playlist — hacerla independiente y no solapar contenido */
+.results-right {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+/* Thumbnail más compacto por defecto, ampliable en pantallas grandes */
+.playlist-thumbnail {
+  width: 72px;    /* reducido para evitar solapamientos */
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(0,0,0,0.05));
+}
+
+/* En pantallas grandes mostramos thumbnail más grande */
+@media (min-width: 1024px) {
+  .playlist-thumbnail {
+    width: 96px;
+    height: 96px;
+  }
+}
+
+/* Limitar alto de la lista de canciones y habilitar scroll dentro de la tarjeta */
+.playlist-songlist {
+  max-height: calc(100vh - 300px); /* deja espacio para header/acciones */
+  overflow-y: auto;
+  padding-right: 8px;
+  margin-top: 0.5rem;
+}
+
+/* Estilos del scroll para mejor UX */
+.playlist-songlist::-webkit-scrollbar {
+  width: 8px;
+}
+
+.playlist-songlist::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+}
+
+/* Asegura que la foto grande no crezca fuera del contenedor */
+.results-photo {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
 .analyze-container.wide {
   max-width: 56rem;
 }
@@ -65,7 +139,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(138, 43, 226, 0.05), rgba(0, 191, 255, 0.05)); /* Gradiente violeta-azul light */
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.05), rgba(0, 191, 255, 0.05));
+  /* Gradiente violeta-azul light */
   pointer-events: none;
 }
 
@@ -97,7 +172,8 @@
   width: 100%;
 }
 
-.upload-button, .capture-button {
+.upload-button,
+.capture-button {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -113,12 +189,13 @@
   font-weight: 500;
   min-width: 200px;
   max-width: 200px;
-  flex: 1; 
+  flex: 1;
   backdrop-filter: blur(10px);
-  box-sizing: border-box; 
+  box-sizing: border-box;
 }
 
-.upload-button:hover, .capture-button:hover {
+.upload-button:hover,
+.capture-button:hover {
   background: rgba(0, 191, 255, 0.2);
   border-color: var(--accent-blue);
   transform: translateY(-2px);
@@ -126,7 +203,8 @@
 }
 
 .upload-button input {
-  display: none; /* Oculta input file */
+  display: none;
+  /* Oculta input file */
 }
 
 /* Contenedor de preview de foto */
@@ -206,15 +284,6 @@
   opacity: 0.6;
 }
 
-/* Estilos para Results */
-.results-grid {
-  display: flex;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-  max-width: 56rem;
-  width: 100%;
-}
-
 .results-left {
   display: flex;
   flex-direction: column;
@@ -252,19 +321,19 @@
 
 .breakdown-title {
   font-size: 1.125rem;
-  font-weight: 700; 
+  font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 0.5rem; 
+  margin-bottom: 0.5rem;
   text-align: left;
 }
 
 .breakdown-bars {
-  padding: 1rem; 
+  padding: 1rem;
   border-radius: 0.5rem;
-  background: rgba(138, 43, 226, 0.1); 
+  background: rgba(138, 43, 226, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem; 
+  gap: 0.75rem;
 }
 
 .bar-item {
@@ -292,8 +361,8 @@
 
 .bar-container {
   flex: 1;
-  height: 0.625rem; 
-  background: rgba(138, 43, 226, 0.2); 
+  height: 0.625rem;
+  background: rgba(138, 43, 226, 0.2);
   border-radius: 9999px;
   overflow: hidden;
 }
@@ -325,11 +394,14 @@
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.3);
   align-items: stretch;
   text-align: left;
+  position: sticky;
+  top: 40px; /* Se alinea con el padding de analyze-main */
+  align-self: start; /* Necesario para que 'sticky' funcione en Grid */
 }
 
 .playlist-title {
   font-size: 1.25rem;
-  font-weight: 700; 
+  font-weight: 700;
   color: var(--text-primary);
   margin: 0;
   text-align: center;
@@ -362,7 +434,7 @@
 
 .playlist-thumbnail {
   width: 8rem;
-  height: 8rem; 
+  height: 8rem;
   border-radius: 0.5rem;
   object-fit: cover;
   flex-shrink: 0;
@@ -379,7 +451,7 @@
 .playlist-type {
   font-size: 0.875rem;
   color: #00FFFF;
-  font-weight: 600; 
+  font-weight: 600;
   margin: 0;
 }
 
@@ -401,23 +473,24 @@
   gap: 0.75rem;
 }
 
-.play-button, .share-button {
+.play-button,
+.share-button {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  height: 3rem; 
-  padding: 0 1.5rem; 
+  height: 3rem;
+  padding: 0 1.5rem;
   border-radius: 0.5rem;
-  font-size: 1rem; 
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .play-button {
-  background: var(--accent-violet); 
+  background: var(--accent-violet);
   color: var(--bg-primary);
 }
 
@@ -522,8 +595,8 @@
 }
 
 .suggestion-play-button:hover {
-  background: rgba(138, 43, 226, 0.4); 
-  box-shadow: 0 4px 8px rgba(138, 43, 226, 0.2); 
+  background: rgba(138, 43, 226, 0.4);
+  box-shadow: 0 4px 8px rgba(138, 43, 226, 0.2);
   transform: scale(1.1);
 }
 
@@ -567,10 +640,11 @@
 /* Responsive */
 @media (max-width: 768px) {
   .results-grid {
-    gap: 1rem; 
+    gap: 1rem;
   }
 
-  .results-photo, .playlist-thumbnail {
+  .results-photo,
+  .playlist-thumbnail {
     width: 100%;
     max-width: 250px;
     height: auto;
@@ -581,7 +655,8 @@
     gap: 0.5rem;
   }
 
-  .play-button, .share-button {
+  .play-button,
+  .share-button {
     width: 100%;
   }
 }
@@ -590,10 +665,6 @@
 @media (min-width: 1024px) {
   .analyze-container.wide {
     max-width: 56rem;
-  }
-  
-  .results-grid {
-    grid-template-columns: repeat(2, 1fr); 
   }
 }
 
@@ -619,7 +690,7 @@
   }
 
   .playlist-name {
-    font-size: 1.875rem; 
+    font-size: 1.875rem;
   }
 }
 
@@ -630,30 +701,38 @@
     width: 100%;
     padding: 20px 16px;
   }
+
   .analyze-container {
     padding: 32px 20px;
     border-radius: 16px;
     gap: 20px;
   }
+
   .upload-title {
     font-size: 24px;
   }
+
   .upload-subtitle {
     font-size: 14px;
   }
+
   .button-group {
     flex-direction: column;
     align-items: center;
   }
-  .upload-button, .capture-button {
+
+  .upload-button,
+  .capture-button {
     width: 100%;
     max-width: 280px;
     min-width: unset;
   }
+
   .photo-preview {
     padding: 32px 20px;
     min-height: 160px;
   }
+
   .analyze-button {
     min-width: 100%;
     max-width: 280px;
@@ -669,5 +748,12 @@
 
   .playlist-title {
     text-align: center;
+  }
+}
+/* Layout para pantallas de tablet y más grandes */
+@media (min-width: 900px) {
+  .results-grid {
+    /* Aquí pones tu layout de 2 columnas */
+    grid-template-columns: 1fr minmax(300px, 440px);
   }
 }
