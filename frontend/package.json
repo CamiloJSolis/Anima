@@ -10,12 +10,14 @@
     "lint": "echo \"(lint frontend)\" && exit 0"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.1.16",
     "axios": "^1.6.8",
     "lucide-react": "^0.545.0",
     "ogl": "^1.0.11",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.1"
+    "react-router-dom": "^6.26.1",
+    "tailwindcss": "^4.1.16"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",

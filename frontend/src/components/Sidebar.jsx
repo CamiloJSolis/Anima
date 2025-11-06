@@ -1,39 +1,101 @@
 import React from 'react';
 import { House, Music, Camera, UserRound, LogIn } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import '../styles/Sidebar.css'; 
+import logo from '../assets/logo.png';
 
 const Sidebar = () => {
   return (
-    <nav className="sidebar">
+    <nav className="
+      /* Desktop: Vertical sidebar (base, md+ overrides if needed, but here base is desktop) */
+      w-20 bg-black/80 backdrop-blur-[10px]
+      flex flex-col items-center py-8 h-screen
+      fixed left-0 top-0 z-1000
+      gap-8 text-white
+      transition-all duration-300 ease-in-out
 
-        {/* Logo integrado como SVG - Idea #1: Silueta de cara transformándose en ondas sonoras */}
-      <div className="logo">
-        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Silueta abstracta de cara */}
-          <path d="M20 10C15 10 12 13 12 18C12 23 15 26 20 26C25 26 28 23 28 18C28 13 25 10 20 10Z" fill="white" opacity="0.9"/>
-          {/* Ojo con flash de cámara */}
-          <circle cx="20" cy="16" r="2" fill="#FFD700"/>
-          <circle cx="20" cy="16" r="1" fill="black"/>
-          {/* Ondas sonoras saliendo */}
-          <path d="M28 18C30 18 32 19 32 20C32 21 30 22 28 22M12 18C10 18 8 19 8 20C8 21 10 22 12 22" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-          {/* Texto 'Ánima' curvado (simplificado) */}
-          <text x="20" y="35" textAnchor="middle" fill="white" fontSize="12" fontFamily="serif">Ánima</text>
-        </svg>
+      /* Mobile: Top navigation bar (≤768px) */
+      max-md:w-full max-md:h-16 max-md:flex-row max-md:py-0 max-md:px-4 max-md:justify-evenly max-md:items-center max-md:gap-0
+      max-md:bg-[rgba(0,0,20,0.80)] max-md:border-b max-md:border-white/10
+    ">
+      {/* Logo - hidden on mobile */}
+      <div className="shrink-0 max-md:hidden">
+        <img src={logo} alt="Anima Logo" className="h-15 w-15" />
       </div>
 
-      <div className="nav-icons">
-        <Link to="/" className="icon">
-          <House />
+      <div className="
+        /* Desktop: Column with skew */
+        flex flex-col gap-6 -skew-y-6 transition-transform duration-300 ease-in-out
+        hover:-skew-y-3
+
+        /* Mobile: Row, no skew */
+        max-md:flex-row max-md:justify-center max-md:items-center max-md:gap-5 max-md:w-full max-md:transform-none
+      ">
+        <Link to="/" className="
+          /* Shared base */
+          p-2 rounded-lg text-(--text-gray) cursor-pointer
+          flex items-center justify-center
+          transition-[color,background-color,opacity,transform] duration-[0.2s,0.3s,0.3s,0.3s] ease-in-out
+
+          /* Desktop hover */
+          hover:text-(--accent-violet) hover:bg-white/20 hover:opacity-90 hover:scale-110
+
+          /* Mobile overrides */
+          max-md:p-2.5 max-md:rounded-xl
+          max-md:hover:bg-white/20 max-md:hover:opacity-90 max-md:hover:scale-110
+          max-md:active:bg-white/30 max-md:active:opacity-90 max-md:active:scale-110
+        ">
+          <House/>
         </Link>
-        <Link to="/analizar" className="icon">
-          <Camera />
+
+        <Link to="/analizar" className="
+          /* Shared base */
+          p-2 rounded-lg text-(--text-gray) cursor-pointer
+          flex items-center justify-center
+          transition-[color,background-color,opacity,transform] duration-[0.2s,0.3s,0.3s,0.3s] ease-in-out
+
+          /* Desktop hover */
+          hover:text-(--accent-violet) hover:bg-white/20 hover:opacity-90 hover:scale-110
+
+          /* Mobile overrides */
+          max-md:p-2.5 max-md:rounded-xl
+          max-md:hover:bg-white/20 max-md:hover:opacity-90 max-md:hover:scale-110
+          max-md:active:bg-white/30 max-md:active:opacity-90 max-md:active:scale-110
+        ">
+          <Camera/>
         </Link>
-        <Link to="/historial" className="icon">
-          <Music />
+
+        <Link to="/historial" className="
+          /* Shared base */
+          p-2 rounded-lg text-(--text-gray) cursor-pointer
+          flex items-center justify-center
+          transition-[color,background-color,opacity,transform] duration-[0.2s,0.3s,0.3s,0.3s] ease-in-out
+
+          /* Desktop hover */
+          hover:text-(--accent-violet) hover:bg-white/20 hover:opacity-90 hover:scale-110
+
+          /* Mobile overrides */
+          max-md:p-2.5 max-md:rounded-xl
+          max-md:hover:bg-white/20 max-md:hover:opacity-90 max-md:hover:scale-110
+          max-md:active:bg-white/30 max-md:active:opacity-90 max-md:active:scale-110
+        ">
+          <Music/>
         </Link>
-        <Link to="/login" className="icon">
-          <UserRound />
+
+        <Link to="/login" className="
+          /* Shared base */
+          p-2 rounded-lg text-(--text-gray) cursor-pointer
+          flex items-center justify-center
+          transition-[color,background-color,opacity,transform] duration-[0.2s,0.3s,0.3s,0.3s] ease-in-out
+
+          /* Desktop hover */
+          hover:text-(--accent-violet) hover:bg-white/20 hover:opacity-90 hover:scale-110
+
+          /* Mobile overrides */
+          max-md:p-2.5 max-md:rounded-xl
+          max-md:hover:bg-white/20 max-md:hover:opacity-90 max-md:hover:scale-110
+          max-md:active:bg-white/30 max-md:active:opacity-90 max-md:active:scale-110
+        ">
+          <UserRound/>
         </Link>
       </div>
     </nav>
