@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Camera,
   ImageUp,
@@ -10,15 +10,18 @@ import {
   RefreshCw,
 } from "lucide-react"; // Íconos adicionales
 import { Link } from 'react-router-dom';
+import Webcam from 'react-webcam';
 import Aurora from "../components/Aurora";
 import { api } from "../services/api";
 
 const Analyze = ({ user }) => {
   const isLoggedIn = !!user && user.name && user.name !== "usuario";
   const [viewMode, setViewMode] = useState("upload"); // 'upload' | 'results'
+  const [cameraMode, setCameraMode] = useState(false); // Para alternar vista de cámara
   const [selectedFile, setSelectedFile] = useState(null); // File object (para enviar)
   const [preview, setPreview] = useState(null); // URL para vista previa
   const [analysisResult, setAnalysisResult] = useState(null); // Resultados mock/API
+  const webcamRef = useRef(null); // Ref para Webcam
 
   // Handle upload
   const handleFileSelect = (e) => {
@@ -28,6 +31,7 @@ const Analyze = ({ user }) => {
     setSelectedFile(file);
     const url = URL.createObjectURL(file);
     setPreview(url);
+    setCameraMode(false); // Desactiva cámara si estaba activa
     console.log("selected file:", file.name, file.size);
   };
 
@@ -201,9 +205,27 @@ const Analyze = ({ user }) => {
         photo: preview,
         playlist: {
           title: "Happy Vibes",
-          thumbnail: "../public/happy-vibes.jpg",
+          thumbnail: "/placeholder-playlist.jpg", // Usa un placeholder real o asset
           generatedBy: "Ánima",
-          songs: ["Song 1 - Artist 1", "Song 2 - Artist 2"],
+          external_url: null,
+          songs: [
+            {
+              id: "mock1",
+              name: "Happy Song 1",
+              artists: ["Artist 1"],
+              preview_url: null, // O un audio mock si tienes
+              external_url: "https://open.spotify.com/track/mock1",
+              album: { images: [{ url: "/placeholder-album.jpg" }] },
+            },
+            {
+              id: "mock2",
+              name: "Happy Song 2",
+              artists: ["Artist 2"],
+              preview_url: null,
+              external_url: "https://open.spotify.com/track/mock2",
+              album: { images: [{ url: "/placeholder-album.jpg" }] },
+            },
+          ],
         },
         breakdown: [
           { emotion: "Happiness", percentage: 85 },
@@ -214,12 +236,12 @@ const Analyze = ({ user }) => {
           {
             title: "Uplifting Beats",
             genre: "Electronic",
-            thumbnail: "/uplifting-beats.jpg",
+            thumbnail: "/placeholder-suggestion1.jpg",
           },
           {
             title: "Feel Good Indie",
             genre: "Indie Rock",
-            thumbnail: "/feel-good-indie.jpg",
+            thumbnail: "/placeholder-suggestion2.jpg",
           },
         ],
       };
@@ -232,13 +254,38 @@ const Analyze = ({ user }) => {
   const handleNewAnalysis = () => {
     setSelectedFile(null);
     setAnalysisResult(null);
+    setPreview(null);
+    setCameraMode(false);
     setViewMode("upload");
   };
 
-  // Handle camera
-  const handleCameraCapture = () => {
-    // Codigo para implementar cámara
-    console.log("Tomar foto con cámara");
+  // Toggle camera mode
+  const toggleCamera = () => {
+    setCameraMode(!cameraMode);
+    if (!cameraMode) {
+      setSelectedFile(null);
+      setPreview(null);
+    }
+  };
+
+  // Handle camera capture
+  const handleCameraCapture = async () => {
+    if (webcamRef.current) {
+      try {
+        const screenshot = webcamRef.current.getScreenshot();
+        if (screenshot) {
+          const response = await fetch(screenshot);
+          const blob = await response.blob();
+          const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
+          setSelectedFile(file);
+          setPreview(screenshot); // Usa la URL data directamente para preview
+          setCameraMode(false); // Oculta cámara después de capturar
+          console.log("captured photo from camera");
+        }
+      } catch (err) {
+        console.error("camera capture error", err);
+      }
+    }
   };
 
   // Valores seguros para evitar crashes si el backend no devuelve playlist/otros campos
@@ -248,9 +295,10 @@ const Analyze = ({ user }) => {
     ? safeResult.breakdown
     : [];
   const playlist = safeResult.playlist || {
-    thumbnail: "/placeholder.jpg",
+    thumbnail: "/placeholder-playlist.jpg",
     title: "Playlist no disponible",
     generatedBy: "Ánima",
+    external_url: null,
     songs: [],
   };
   const suggestions = Array.isArray(safeResult.suggestions)
@@ -308,7 +356,7 @@ const Analyze = ({ user }) => {
                   backdrop-blur-[10px] hover:bg-[rgba(0,191,255,0.2)] hover:border-(--accent-blue) hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,191,255,0.2)]
                 ">
                   <ImageUp size={20} />
-                  <span>Subir Archivo</span>
+                  <span>{selectedFile ? 'Subir otra Foto' : 'Subir Foto'}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -323,38 +371,70 @@ const Analyze = ({ user }) => {
                     transition-all duration-200 font-medium text-sm min-w-[200px] max-w-[200px] flex-1
                     backdrop-blur-[10px] hover:bg-[rgba(0,191,255,0.2)] hover:border-(--accent-blue) hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,191,255,0.2)]
                   "
-                  onClick={handleCameraCapture}
+                  onClick={toggleCamera}
                 >
                   <Camera size={20} />
-                  <span>Tomar Foto</span>
+                  <span>{cameraMode ? 'Cancelar' : 'Tomar Foto'}</span>
                 </button>
               </div>
 
-              <div className="
-                border-2 border-dashed border-(--text-gray) rounded-xl p-10 px-6
-                bg-[rgba(25,25,112,0.05)] min-h-[200px] flex flex-col items-center justify-center gap-3 w-full
-                backdrop-blur-[5px] transition-colors duration-200 hover:border-(--accent-blue) z-3
-                /* Mobile: Smaller padding */
-                max-md:p-8 max-md:min-h-40
-              ">
-                {preview ? (
-                  <img
-                    src={preview}
-                    alt="Vista previa"
-                    className="max-w-full max-h-[200px] rounded-lg object-cover"
+              {/* Webcam Preview (solo si cameraMode activo) */}
+              {cameraMode && (
+                <div className="w-full z-3">
+                  <Webcam
+                    audio={false}
+                    ref={webcamRef}
+                    screenshotFormat="image/jpeg"
+                    videoConstraints={{ width: 1280, height: 720, facingMode: "user" }}
+                    className="w-full rounded-xl object-cover max-h-[400px] border-2 border-(--accent-blue)"
                   />
-                ) : (
-                  <>
-                    <Search size={48} className="text-(--text-gray) opacity-60" />
-                    <p className="text-base text-(--text-primary) font-medium m-0">
-                      No se ha seleccionado ningún archivo
-                    </p>
-                    <p className="text-sm text-(--text-gray) m-0 leading-1.4">
-                      Tu archivo o imagen seleccionado aparecerá aquí.
-                    </p>
-                  </>
-                )}
-              </div>
+                  <button
+                    className="
+                      mt-4 bg-(--accent-blue) text-white border-none rounded-lg p-3 px-6
+                      text-base font-semibold cursor-pointer transition-all duration-200 w-full
+                      shadow-[0_4px_12px_rgba(0,191,255,0.2)] hover:bg-[#0099CC] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(0,191,255,0.3)]
+                      max-md:w-full
+                    "
+                    onClick={handleCameraCapture}
+                  >
+                    Capturar Foto
+                  </button>
+                </div>
+              )}
+
+              {/* Preview del archivo seleccionado (no cámara) */}
+              {!cameraMode && (
+                <div className={`
+                  border-2 rounded-xl p-10 px-6
+                  min-h-[200px] flex flex-col items-center justify-center gap-3 w-full
+                  backdrop-blur-[5px] transition-all duration-200 z-3
+                  /* Mobile: Smaller padding */
+                  max-md:p-8 max-md:min-h-40
+                  /* Estados dinámicos basados en preview */
+                  ${preview 
+                    ? 'border-dashed border-(--accent-blue) bg-[rgba(0,191,255,0.05)] hover:border-solid hover:shadow-[0_4px_12px_rgba(0,191,255,0.2)]' 
+                    : 'border-dashed border-(--text-gray) bg-[rgba(25,25,112,0.05)] hover:border-(--accent-blue) hover:bg-[rgba(0,191,255,0.05)]'
+                  }
+                `}>
+                  {preview ? (
+                    <img
+                      src={preview}
+                      alt="Vista previa"
+                      className="max-w-full max-h-[200px] rounded-lg object-cover"
+                    />
+                  ) : (
+                    <>
+                      <Search size={48} className="text-(--text-gray) opacity-60" />
+                      <p className="text-base text-(--text-primary) font-medium m-0">
+                        No se ha seleccionado ningún archivo
+                      </p>
+                      <p className="text-sm text-(--text-gray) m-0 leading-1.4">
+                        Tu archivo o imagen seleccionado aparecerá aquí.
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
 
               <button
                 className={`
@@ -367,7 +447,7 @@ const Analyze = ({ user }) => {
                   max-md:w-full max-md:max-w-[280px]
                 `}
                 onClick={handleAnalyze}
-                disabled={!selectedFile}
+                disabled={!selectedFile || cameraMode}
               >
                 Analizar
               </button>
@@ -405,31 +485,35 @@ const Analyze = ({ user }) => {
                       p-4 rounded-[10px] bg-[rgba(138,43,226,0.1)]
                       flex flex-col gap-3
                     ">
-                      {breakdown.map((item, index) => (
-                        <div
-                          key={index}
-                          className={`
-                            flex items-center justify-between gap-4 text-sm
-                            ${index > 0 ? "opacity-85" : ""}
-                          `}
-                        >
-                          <span className="font-semibold text-(--text-primary) min-w-20 text-left">
-                            {item.emotion}
-                          </span>
-                          <div className="flex-1 h-1.5 bg-[rgba(138,43,226,0.2)] rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-linear-to-r from-[#8A2BE2] to-[#00BFFF] rounded-full transition-all duration-500"
-                              style={{ width: `${item.percentage}%` }}
-                            ></div>
+                      {breakdown.length > 0 ? (
+                        breakdown.map((item, index) => (
+                          <div
+                            key={index}
+                            className={`
+                              flex items-center justify-between gap-4 text-sm
+                              ${index > 0 ? "opacity-85" : ""}
+                            `}
+                          >
+                            <span className="font-semibold text-(--text-primary) min-w-20 text-left">
+                              {item.emotion}
+                            </span>
+                            <div className="flex-1 h-1.5 bg-[rgba(138,43,226,0.2)] rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-linear-to-r from-[#8A2BE2] to-[#00BFFF] rounded-full transition-all duration-500"
+                                style={{ width: `${item.percentage}%` }}
+                              ></div>
+                            </div>
+                            <span className={`
+                              font-semibold min-w-[30px] text-right
+                              ${index > 0 ? "text-[#33E6E6]" : "text-[#00FFFF]"}
+                            `}>
+                              {item.percentage}%
+                            </span>
                           </div>
-                          <span className={`
-                            font-semibold min-w-[30px] text-right
-                            ${index > 0 ? "text-[#33E6E6]" : "text-[#00FFFF]"}
-                          `}>
-                            {item.percentage}%
-                          </span>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <p className="text-(--text-gray) text-sm text-center m-0">No se detectaron emociones.</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -442,6 +526,35 @@ const Analyze = ({ user }) => {
                   /* Mobile: full width */
                   max-md:sticky-none max-md:top-0
                 ">
+                  {/* Playlist Header */}
+                  <div className="mb-4 pb-4 border-b border-white/10">
+                    <h3 className="text-xl font-bold text-(--text-primary) mb-2 text-left">
+                      {playlist.title}
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={playlist.thumbnail || "/placeholder-playlist.jpg"}
+                        alt={playlist.title}
+                        className="w-16 h-16 rounded-md object-cover shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-(--text-gray) m-0 truncate">
+                          Por {playlist.generatedBy}
+                        </p>
+                        {playlist.external_url && (
+                          <a
+                            href={playlist.external_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-(--accent-blue) text-sm font-medium no-underline hover:text-(--accent-violet)"
+                          >
+                            Abrir en Spotify
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Playlist Songs List */}
                   {Array.isArray(playlist.songs) && playlist.songs.length > 0 ? (
                     <div className="mt-4 max-h-[calc(100vh-300px)] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/6 scrollbar-track-transparent">
@@ -460,7 +573,7 @@ const Analyze = ({ user }) => {
                               src={
                                 s.album?.images?.[0]?.url ||
                                 playlist.thumbnail ||
-                                "/placeholder.jpg"
+                                "/placeholder-album.jpg"
                               }
                               alt={s.name}
                               className="w-12 h-12 object-cover rounded-md shrink-0"
@@ -473,28 +586,30 @@ const Analyze = ({ user }) => {
                                 {(s.artists || []).join(", ")}
                               </div>
                             </div>
-                            {s.preview_url ? (
-                              <audio
-                                controls
-                                src={s.preview_url}
-                                className="w-[120px]"
-                              />
-                            ) : s.external_url ? (
-                              <a
-                                href={s.external_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-cyan-400 font-bold no-underline hover:text-cyan-300"
-                              >
-                                Abrir
-                              </a>
-                            ) : null}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {s.preview_url ? (
+                                <audio
+                                  controls
+                                  src={s.preview_url}
+                                  className="w-[120px] max-md:w-20"
+                                />
+                              ) : s.external_url ? (
+                                <a
+                                  href={s.external_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-cyan-400 font-bold no-underline hover:text-cyan-300 text-sm"
+                                >
+                                  Abrir
+                                </a>
+                              ) : null}
+                            </div>
                           </li>
                         ))}
                       </ul>
                     </div>
                   ) : (
-                    <div className="text-center py-4">
+                    <div className="text-center py-4 mb-4">
                       <p className="text-(--text-gray)">No se pudo generar una playlist.</p>
                     </div>
                   )}
@@ -507,11 +622,11 @@ const Analyze = ({ user }) => {
                       Más Sugerencias
                     </h4>
                     <div className="flex flex-col gap-3">
-                      { suggestions.map((suggestion, index) => (
+                      {suggestions.map((suggestion, index) => (
                         <div key={index} className="flex justify-between items-center py-2 gap-4">
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             <img
-                              src={suggestion.thumbnail}
+                              src={suggestion.thumbnail || "/placeholder-suggestion.jpg"}
                               alt={suggestion.title}
                               className="w-12 h-12 rounded-md object-cover shrink-0"
                             />
@@ -549,7 +664,7 @@ const Analyze = ({ user }) => {
                             </button>
                           </div>
                         </div>
-                      )) }
+                      ))}
                     </div>
                   </div>
 

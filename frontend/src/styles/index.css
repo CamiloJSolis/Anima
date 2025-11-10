@@ -1,8 +1,6 @@
 @import "tailwindcss";
 
 /* Paleta oficial de la app */
-@import './Aurora.css';  
-
 :root {
   --bg-primary: #000011;
   --bg-secondary: #191970;

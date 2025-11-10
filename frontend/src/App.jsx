@@ -5,6 +5,8 @@ import Home from './pages/Home.jsx';
 import Analizar from './pages/Analizar.jsx';
 import Historial from './pages/Historial.jsx';
 import Login from './pages/Login.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
 
 function App() {
   return (
@@ -17,6 +19,8 @@ function App() {
             <Route path="/analizar" element={<Analizar />} />
             <Route path="/historial" element={<Historial />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
         </main>
       </div>
