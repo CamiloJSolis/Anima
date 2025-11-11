@@ -3,31 +3,23 @@ import { Play, Edit3, MoreVertical, LogIn } from 'lucide-react';
 import SongTicker from '../components/SongTicker.jsx';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
+import { useAuth } from '../services/auth.jsx'; 
 
-export default function Historial({ user: userProp = null }) {
-  const [user, setUser] = useState(userProp);
+export default function Historial() {
+  
+  const { user, isAuthenticated: isLoggedIn, isLoading: isAuthLoading } = useAuth();
+
+
   const [history, setHistory] = useState([]);
   const [dominant, setDominant] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); 
   const [error, setError] = useState(null);
 
-  // Cargar usuario (si no vino por props)
-  useEffect(() => {
-    let mounted = true;
-    if (!userProp) {
-      api.get('/auth/me')
-        .then(res => { if (mounted) setUser(res.data?.user || null); })
-        .catch(() => { if (mounted) setUser(null); });
-    }
-    return () => { mounted = false; };
-  }, [userProp]);
-
-  // Cargar historial y resumen semanal (requiere estar logueado)
   useEffect(() => {
     let mounted = true;
     async function fetchData() {
-      if (!user) {
-        if (mounted) setLoading(false); // Early exit for non-logged: stop loading
+      if (!isLoggedIn) { 
+        if (mounted) setLoading(false);
         return;
       }
       try {
@@ -47,19 +39,23 @@ export default function Historial({ user: userProp = null }) {
         if (mounted) setLoading(false);
       }
     }
-    fetchData();
+    
+    if (!isAuthLoading) {
+        fetchData();
+    }
+    
     return () => { mounted = false; };
-  }, [user]); // Depend on user now
+  }, [isLoggedIn, isAuthLoading]); 
 
   const displayName =
     (user?.username && user.username.trim()) ||
     (user?.name && user.name.trim()) ||
     (user?.email ? user.email.split('@')[0] : 'usuario');
 
-  if (loading) return <div className="text-center py-10 text-(--text-gray)">Cargando...</div>;
-
-  const isLoggedIn = !!user; // Simple check
-
+  if (isAuthLoading || loading) {
+    return <div className="text-center py-10 text-(--text-gray)">Cargando...</div>;
+  }
+  
   return (
     <div className="
       min-h-screen bg-(--bg-primary) text-(--text-primary) font-(--font-family)

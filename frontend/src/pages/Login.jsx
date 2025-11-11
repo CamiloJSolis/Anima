@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Lock, Eye, EyeOff, User, Link as LinkIcon, LogIn, AlertCircle } from 'lucide-react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { useAuth } from '../services/auth.jsx'; // <-- PASO 1: Importar useAuth
 
 export default function Login() {
   const [searchParams] = useSearchParams();
@@ -14,14 +15,22 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // Nuevos estados para feedback mejorado
-  const [passwordStrength, setPasswordStrength] = useState(''); // '', 'weak', 'medium', 'strong'
-  const [passwordErrors, setPasswordErrors] = useState([]); // Array de errores específicos
-  const [confirmError, setConfirmError] = useState(''); // Error solo para confirmación
-  const [fieldErrors, setFieldErrors] = useState({}); // Errores por campo: { email: '', username: '' }
-  const [submitError, setSubmitError] = useState(''); // Error global solo para submit/backend
+  // Estados de feedback (sin cambios)
+  const [passwordStrength, setPasswordStrength] = useState('');
+  const [passwordErrors, setPasswordErrors] = useState([]);
+  const [confirmError, setConfirmError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
 
-  // Detecta modo desde URL
+  // <-- PASO 2: Usar el Contexto Global
+  // Obtenemos 'login' y renombramos 'isAuthenticated' a 'authedUser'
+  // y 'user' (el objeto) para 'displayName'
+  const { login, isAuthenticated: authedUser, user } = useAuth();
+  
+  // (El useEffect que llamaba a /auth/me se eliminó porque 
+  //  ahora el AuthProvider se encarga de eso)
+
+  // Detecta modo desde URL (sin cambios)
   useEffect(() => {
     const urlMode = searchParams.get('mode');
     if (urlMode && ['login', 'register'].includes(urlMode)) {
@@ -29,19 +38,12 @@ export default function Login() {
     }
   }, [searchParams]);
 
-  // Detecta si ya hay sesión activa
-  const [authedUser, setAuthedUser] = useState(null);
-  useEffect(() => {
-    api.get('/auth/me')
-      .then(res => setAuthedUser(res.data?.user || null))
-      .catch(() => setAuthedUser(null));
-  }, []);
-
-  // Regex para contraseña fuerte
+  // Regex (sin cambios)
   const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
-  // Función para validar contraseña y actualizar strength/errores
+  // Funciones de validación (sin cambios)
   const validatePassword = (pwd) => {
+    // ... (tu lógica de validación de contraseña)
     setPasswordErrors([]);
     let strength = '';
     let errors = [];
@@ -62,7 +64,7 @@ export default function Login() {
       errors.push('Al menos 1 símbolo (@$!%*?&)');
     }
 
-    const totalReq = 5; // 4 reglas + longitud
+    const totalReq = 5;
     const metReq = (pwd.length >= 8 ? 1 : 0) + (/(?=.*[a-z])/.test(pwd) ? 1 : 0) + (/(?=.*[A-Z])/.test(pwd) ? 1 : 0) + (/(?=.*\d)/.test(pwd) ? 1 : 0) + (/(?=.*[@$!%*?&])/.test(pwd) ? 1 : 0);
     
     if (metReq === totalReq) {
@@ -78,7 +80,7 @@ export default function Login() {
     return errors.length === 0;
   };
 
-  // Handlers con validación en tiempo real
+  // Handlers (sin cambios)
   const handlePasswordChange = (e) => {
     const newPwd = e.target.value;
     setPassword(newPwd);
@@ -103,24 +105,24 @@ export default function Login() {
   const handleEmailChange = (e) => {
     const newEmail = e.target.value;
     setEmail(newEmail);
-    // Validación básica de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     setFieldErrors(prev => ({ ...prev, email: !emailRegex.test(newEmail) ? 'Email inválido' : '' }));
   };
 
+  // <-- PASO 3: Actualizar la función submit
   async function submit(e) {
     e.preventDefault();
     setSubmitError('');
     setFieldErrors({});
 
-    // Validaciones frontend antes de submit
+    // (Validaciones de frontend sin cambios)
     if (mode === 'register') {
       if (username.trim().length < 3) {
         setFieldErrors(prev => ({ ...prev, username: 'Mínimo 3 caracteres' }));
         return;
       }
       if (!validatePassword(password)) {
-        return; // Errores ya mostrados en UI
+        return;
       }
       if (password !== confirmPassword) {
         setConfirmError('Las contraseñas no coinciden');
@@ -135,11 +137,26 @@ export default function Login() {
           ? { email, password }
           : { username, email, password, confirmPassword };
 
-      await api.post(url, payload);
-      // Feedback de éxito (puedes añadir un toast aquí)
-      window.location.href = '/';
+      // 1. Llama a la API y guarda la respuesta
+      const res = await api.post(url, payload);
+
+      // 2. Obtén el usuario de la respuesta
+      const userData = res.data?.user;
+
+      // 3. ¡Llama a la función login() del Contexto!
+      if (userData) {
+        login(userData);
+      } else if (mode === 'login') {
+        login({ email }); // Fallback por si la API no devuelve usuario en login
+      } else {
+        login({ username, email }); // Fallback para registro
+      }
+      
+      // 4. Redirige usando 'navigate'
+      navigate(mode === 'login' ? '/profile' : '/'); // A /profile si es login, a / (home) si es registro
+
     } catch (err) {
-      // Mapeo de errores backend a mensajes amigables
+      // (Manejo de errores sin cambios)
       const backendMsg = err.response?.data?.error || err.response?.data?.errors?.[0]?.msg || 'Error inesperado';
       let friendlyMsg = backendMsg;
       if (backendMsg.includes('password')) {
@@ -163,7 +180,6 @@ export default function Login() {
   }
   function toggleMode(newMode) {
     setMode(newMode);
-    // Reset estados de feedback
     setSubmitError('');
     setPasswordErrors([]);
     setConfirmError('');
@@ -173,11 +189,12 @@ export default function Login() {
     navigate(`?mode=${newMode}`);
   }
 
+  // <-- PASO 4: Actualizar displayName
   const displayName =
-    (authedUser?.username && authedUser.username) ||
-    (authedUser?.email ? authedUser.email.split('@')[0] : null);
+    (user?.username && user.username) || // Ahora usa 'user' (el objeto)
+    (user?.email ? user.email.split('@')[0] : null);
 
-  // Helper para color de strength
+  // Helper para color (sin cambios)
   const getStrengthColor = (strength) => {
     switch (strength) {
       case 'strong': return 'text-green-500';
@@ -187,6 +204,7 @@ export default function Login() {
     }
   };
 
+  // (Todo el JSX de 'return' se queda exactamente igual)
   return (
     <div className="min-h-screen bg-(--bg-primary) text-(--text-primary) font-(--font-family) flex items-center justify-center p-5">
       <div className="bg-linear-to-br from-[rgba(138,43,226,0.4)] to-[rgba(0,191,255,0.3)] backdrop-blur-[10px] rounded-2xl p-10 w-full max-w-md text-center shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-[rgba(156,163,175,0.2)] max-md:p-8 max-md:m-2.5">
@@ -197,9 +215,11 @@ export default function Login() {
           Coloca tus datos para {mode === 'login' ? 'iniciar sesión' : 'crear cuenta'}
         </p>
 
+        {/* 'authedUser' ahora es el booleano del contexto */}
         {authedUser && (
           <div className="flex items-center gap-2 bg-[rgba(138,43,226,0.1)] border border-[rgba(138,43,226,0.2)] rounded-md p-3 mb-4 text-left">
             <LogIn size={16} />
+            {/* 'displayName' usa el 'user' del contexto */}
             <span>Ya iniciaste sesión como <strong>@{displayName}</strong></span>
           </div>
         )}
@@ -273,7 +293,6 @@ export default function Login() {
             </div>
           </>
 
-          {/* Indicador de fuerza */}
           {mode === 'register' && password && (
             <div className="text-left text-xs space-y-1">
               <p className={`font-medium ${getStrengthColor(passwordStrength)}`}>
@@ -335,7 +354,7 @@ export default function Login() {
 
           <button
             type="submit"
-            disabled={mode === 'register' && (passwordErrors.length > 0 || !!confirmError)} // Deshabilita si hay errores
+            disabled={mode === 'register' && (passwordErrors.length > 0 || !!confirmError)}
             className={`
               border-none rounded-md py-3.5 text-base font-medium cursor-pointer transition-all duration-200 w-full
               ${mode === 'register' && (passwordErrors.length > 0 || !!confirmError) 
@@ -348,7 +367,7 @@ export default function Login() {
         </form>
 
         <div className="mt-6">
-          {!authedUser ? (
+          {!authedUser ? ( // Usa 'authedUser' del contexto
             <button
               onClick={spotifyContinue}
               className="bg-[#22c55e] text-white border-none rounded-md py-3 text-sm cursor-pointer w-full transition-colors hover:bg-[#16a34a]"
@@ -368,7 +387,7 @@ export default function Login() {
 
         <p className="text-sm text-(--text-gray) mt-6 m-0 max-md:text-xs">
           {mode === 'login' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
-          <button Reset-Password
+          <button
             type="button"
             onClick={() => toggleMode(mode === 'login' ? 'register' : 'login')}
             className="text-(--accent-violet) no-underline font-medium ml-1 transition-colors hover:text-(--accent-blue)"

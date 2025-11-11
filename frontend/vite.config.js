@@ -19,5 +19,10 @@ export default defineConfig({
       '/api': 'http://127.0.0.1:4000',
       '/recommendations': 'http://127.0.0.1:4000'
     }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.js', // Ruta al archivo de setup
   }
 });
