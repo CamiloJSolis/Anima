@@ -1,7 +1,7 @@
 import React from 'react';
 import { House, Music, Camera, UserRound, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import logo from '../assets/logo.png'; // <- Esta ruta
+import logo from '../assets/logo.png';
 import { useAuth } from '../services/auth'; 
 
 const Sidebar = () => {
@@ -19,12 +19,16 @@ const Sidebar = () => {
 
   return (
     <nav className="
-      /* ... (todas tus clases de Tailwind) ... */
+      /* Desktop: Vertical sidebar */
       w-20 bg-black/80 backdrop-blur-[10px]
       flex flex-col items-center py-8 h-screen
       fixed left-0 top-0 z-1000
       gap-8 text-white
-      /* ... etc ... */
+
+      /* Mobile: Horizontal top bar */
+      max-md:top-0 max-md:bottom-auto max-md:h-16 max-md:w-full max-md:flex-row
+      max-md:py-0 max-md:px-4 max-md:justify-evenly max-md:items-center max-md:gap-0
+      max-md:bg-[rgba(0,0,20,0.80)] max-md:border-b max-md:border-white/10
     ">
       {/* Logo */}
       <div className="shrink-0 max-md:hidden">
@@ -32,8 +36,12 @@ const Sidebar = () => {
       </div>
 
       <div className="
-        /* ... (todas tus clases de Tailwind) ... */
-        flex flex-col gap-6 -skew-y-6 ... etc ...
+/* Desktop: Column with skew */
+        flex flex-col gap-6 -skew-y-6 transition-transform duration-300 ease-in-out
+        hover:-skew-y-3
+
+        /* Mobile: Row, no skew, full width spacing */
+        max-md:flex-row max-md:justify-center max-md:items-center max-md:gap-0 max-md:w-full max-md:transform-none
       ">
         
         {/* === ENLACES PÚBLICOS (Siempre visibles) === */}
