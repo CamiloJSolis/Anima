@@ -1,40 +1,48 @@
-import dotenv from 'dotenv';
-dotenv.config(); // <-- antes de cualquier uso de process.env
-
+// /backend/src/index.js
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+
 import authRoutes from './routes/auth.routes.js';
 import analyzeRoutes from './routes/analyze.routes.js';
+import recommendationsRoutes from './routes/recommendations.routes.js';
 import spotifyRoutes from './routes/spotify.routes.js';
-import recRoutes from './routes/recommendations.routes.js';
-
+import historyRoutes from './routes/history.routes.js'; // <-- NUEVO
 
 const app = express();
-app.use(helmet());
-app.use(cors({
-  origin: 'http://127.0.0.1:5173',
-  credentials: true
-}));
+
+const FRONTEND_ORIGIN = 'http://127.0.0.1:5173';
+
+app.use(
+  cors({
+    origin: FRONTEND_ORIGIN,
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(morgan('dev'));
-
-
-app.get('/health', (req,res)=>res.json({ ok:true }));
 
 app.use('/auth', authRoutes);
-app.use('/api', analyzeRoutes); 
+app.use('/analyze', analyzeRoutes);
+app.use('/recommendations', recommendationsRoutes);
 app.use('/auth/spotify', spotifyRoutes);
-app.use('/recommendations', recRoutes);
 
-// logger de errores para ver el 500
-app.use((err, req, res, next) => {
-  console.error('❌ Internal:', err.message, '\n', err.stack);
-  res.status(err.status || 500).json({ error: 'Internal error', details: err.message });
+// monta el historial real:
+app.use('/history', historyRoutes); // <-- NUEVO
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
-app.listen(process.env.PORT || 4000, () => console.log('API up'));
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
+});
+
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`Backend escuchando en http://127.0.0.1:${PORT}`);
+});

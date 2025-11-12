@@ -91,4 +91,34 @@ router.get('/me', async (req,res)=>{
   }
 });
 
+// --- SOLO DESARROLLO: crea/usa un usuario de prueba y setea cookie JWT ---
+router.post('/dev-login', async (req, res, next) => {
+  try {
+    // intenta reutilizar un usuario; si no existe, créalo
+    const email = 'test@anima.com';
+    let r = await pool.query('SELECT * FROM users WHERE email=$1 LIMIT 1', [email]);
+    let user = r.rows[0];
+
+    if (!user) {
+      const ins = await pool.query(
+        `INSERT INTO users (username, email, password_hash)
+         VALUES ($1,$2,'dev_login') RETURNING *`,
+        ['tester', email]
+      );
+      user = ins.rows[0];
+    }
+
+    const token = signToken({ user_id: user.user_id, email: user.email });
+    res.cookie('token', token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.COOKIE_SECURE === 'true',
+    });
+
+    res.json({ ok: true, user: { user_id: user.user_id, email: user.email, username: user.username } });
+  } catch (e) { next(e); }
+});
+
+
+
 export default router;

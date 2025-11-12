@@ -1,263 +1,319 @@
-import React, { useState, useEffect } from 'react';
-import { Play, Edit3, MoreVertical, LogIn } from 'lucide-react';
-import SongTicker from '../components/SongTicker.jsx';
-import { Link } from 'react-router-dom';
-import { api } from '../services/api';
-import { useAuth } from '../services/auth.jsx'; 
+// frontend/src/pages/Historial.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { LogIn, UserPlus, History as HistoryIcon, Clock, ExternalLink, Music2 } from "lucide-react";
+import { useAuth } from "../services/auth.jsx";
+import { api } from "../services/api.js";
 
+/* ------------------------------------------------------------------ */
+/*  Estilos por emoción (ajústalo a tu paleta si quieres)             */
+/* ------------------------------------------------------------------ */
+const EMO_COLORS = {
+  HAPPY: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+  CALM: "bg-sky-500/20 text-sky-300 border-sky-500/30",
+  SAD: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30",
+  ANGRY: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+  FEAR: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+  SURPRISE: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
+  CONFUSED: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
+  DISGUST: "bg-lime-500/20 text-lime-300 border-lime-500/30",
+};
+
+function EmotionChip({ emotion }) {
+  const cls = EMO_COLORS[emotion] || "bg-white/10 text-white border-white/20";
+  return (
+    <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold border ${cls}`}>
+      <Music2 size={14} />
+      {emotion}
+    </span>
+  );
+}
+
+function formatDate(ts) {
+  try {
+    const d = new Date(ts);
+    return d.toLocaleString();
+  } catch {
+    return ts;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Hero “no autenticado” (como tu imagen 1)                          */
+/* ------------------------------------------------------------------ */
+function HeroNoAuth() {
+  const navigate = useNavigate();
+  return (
+    <div
+      className="
+        min-h-screen bg-[var(--bg-primary)] text-white font-[var(--font-family)]
+        flex flex-col items-center justify-center relative
+        ml-20 w-[calc(100%-80px)] p-8
+        max-md:ml-0 max-md:w-full max-md:pt-20 max-md:pb-24 max-md:p-4
+      "
+    >
+      <p className="absolute top-4 left-4 text-[var(--text-gray)] max-md:hidden">
+        ¡Hola, usuario! Inicia sesión para ver tu historial personalizado.
+      </p>
+
+      <LogIn size={96} className="text-[var(--accent-violet)] mb-6" />
+      <h1 className="text-4xl font-bold mb-4 text-center max-md:text-3xl">
+        Inicia sesión para ver tu historial
+      </h1>
+      <p className="text-lg text-[var(--text-gray)] mb-8 text-center max-md:text-base">
+        Accede a tus análisis anteriores, emociones dominantes y recomendaciones personalizadas.
+      </p>
+
+      <div className="flex gap-4 max-md:flex-col max-md:w-full max-md:px-8">
+        <button
+          onClick={() => navigate("/login")}
+          className="
+            flex items-center justify-center gap-2
+            px-8 py-3 rounded-full text-lg font-semibold
+            bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-violet)] text-white
+            transition-all duration-300 ease-in-out
+            hover:opacity-90 hover:scale-105
+            max-md:w-full max-md:px-4 max-md:py-2 max-md:text-base
+          "
+        >
+          <LogIn size={20} /> Iniciar Sesión
+        </button>
+
+        <button
+          onClick={() => navigate("/login?mode=register")}
+          className="
+            flex items-center justify-center gap-2
+            px-8 py-3 rounded-full text-lg font-semibold
+            bg-gray-700 text-white
+            transition-all duration-300 ease-in-out
+            hover:bg-gray-600 hover:scale-105
+            max-md:w-full max-md:px-4 max-md:py-2 max-md:text-base
+          "
+        >
+          <UserPlus size={20} /> Crear Cuenta
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Vista principal                                                    */
+/* ------------------------------------------------------------------ */
 export default function Historial() {
-  
-  const { user, isAuthenticated: isLoggedIn, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
-
-  const [history, setHistory] = useState([]);
-  const [dominant, setDominant] = useState(null);
-  const [loading, setLoading] = useState(true); 
+  // Estado para historial real
+  const [loading, setLoading] = useState(false);
+  const [sessions, setSessions] = useState([]);
   const [error, setError] = useState(null);
 
+  // Cargar historial real solo si hay sesión
   useEffect(() => {
     let mounted = true;
-    async function fetchData() {
-      if (!isLoggedIn) { 
-        if (mounted) setLoading(false);
-        return;
-      }
+    if (!isAuthenticated) {
+      setSessions([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+    (async () => {
       try {
         setLoading(true);
-        const [histRes, summaryRes] = await Promise.all([
-          api.get('/recommendations/history?page=1&limit=20'),
-          api.get('/recommendations/weekly-summary')
-        ]);
-        if (!mounted) return;
-        setHistory(histRes.data || []);
-        setDominant(summaryRes.data || null);
         setError(null);
-      } catch (err) {
-        console.error('Error cargando historial:', err);
-        if (mounted) setError('No se pudo cargar tu historial o el resumen semanal.');
+        const res = await api.get("/history");
+        if (!mounted) return;
+        setSessions(res.data?.sessions || []);
+      } catch (e) {
+        if (!mounted) return;
+        setError(e?.message || "Error al cargar historial");
+        setSessions([]);
       } finally {
         if (mounted) setLoading(false);
       }
-    }
-    
-    if (!isAuthLoading) {
-        fetchData();
-    }
-    
-    return () => { mounted = false; };
-  }, [isLoggedIn, isAuthLoading]); 
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [isAuthenticated]);
 
-  const displayName =
-    (user?.username && user.username.trim()) ||
-    (user?.name && user.name.trim()) ||
-    (user?.email ? user.email.split('@')[0] : 'usuario');
+  // Resumen por emoción
+  const summary = useMemo(() => {
+    const counts = {};
+    for (const s of sessions) counts[s.emotion] = (counts[s.emotion] || 0) + 1;
+    const total = sessions.length || 1;
+    const list = Object.entries(counts)
+      .map(([emotion, count]) => ({
+        emotion,
+        count,
+        pct: Math.round((count / total) * 100),
+      }))
+      .sort((a, b) => b.count - a.count);
+    return { total: sessions.length, list };
+  }, [sessions]);
 
-  if (isAuthLoading || loading) {
-    return <div className="text-center py-10 text-(--text-gray)">Cargando...</div>;
-  }
-  
+  // Si NO hay sesión → Hero
+  if (!isAuthenticated) return <HeroNoAuth />;
+
+  // Con sesión → vista pro
   return (
-    <div className="
-      min-h-screen bg-(--bg-primary) text-(--text-primary) font-(--font-family)
-      flex flex-col relative
-      /* Desktop: Sidebar offset */
-      ml-20 w-[calc(100%-80px)]
-      /* Mobile: Full width */
-      max-md:ml-0 max-md:w-full max-md:pt-20 max-md:pb-24
-    ">
+    <div
+      className="
+        min-h-screen bg-[var(--bg-primary)] text-white font-[var(--font-family)]
+        flex flex-col relative
+        ml-20 w-[calc(100%-80px)] p-8
+        max-md:ml-0 max-md:w-full max-md:pt-20 max-md:pb-24 max-md:p-4
+      "
+    >
+      {/* Saludo superior */}
+      <p className="absolute top-4 left-4 text-[var(--text-gray)] max-md:hidden">
+        ¡Hola, {user?.username || user?.name || "usuario"}! Aquí tienes tu actividad reciente.
+      </p>
+
       {/* Header */}
-      <header className="
-        bg-[rgba(0,0,17,0.8)] backdrop-blur-[10px] border-b border-[rgba(138,43,226,0.3)]
-        sticky top-0 z-20 p-3 px-6 flex items-center justify-start
-        /* Sticky only in desktop */
-        md:sticky md:top-0 md:z--20
-      ">
-        <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold text-white m-0">
-            ¡Hola, {displayName}!
-          </h1>
-          {isLoggedIn ? (
-            dominant?.dominant_emotion ? (
-              <p className="text-sm text-(--text-gray) m-0">
-                🎧 Emoción dominante esta semana: <strong>{dominant.dominant_emotion}</strong> ({dominant.count} detecciones)
-              </p>
-            ) : (
-              <p className="text-sm text-(--text-gray) m-0">
-                Aún no hay suficientes datos para el resumen semanal.
-              </p>
-            )
-          ) : (
-            <p className="text-sm text-(--text-gray) m-0">
-              Inicia sesión para ver tu historial personalizado.
+      <header className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <HistoryIcon className="w-7 h-7 text-[var(--accent-violet)]" />
+          <div>
+            <h1 className="text-3xl font-bold leading-tight">Historial</h1>
+            <p className="text-sm text-white/60">
+              Revisa tus análisis y playlists generadas.
             </p>
-          )}
+          </div>
         </div>
       </header>
 
-      {/* Main */}
-      <main className="
-        flex-1 min-w-0 p-10 px-6 overflow-y-auto
-        /* Mobile: Adjusted padding */
-        max-md:p-6 max-md:px-4
-      ">
-        <div className="w-full max-w-[1200px] mx-auto">
-          {isLoggedIn ? (
-            <>
-              <h2 className="
-                text-2xl font-semibold text-(--text-primary) mb-6 pl-2
-                border-l-4 border-(--accent-violet)
-                /* Mobile: Smaller */
-                max-md:text-xl max-md:mb-4
-              ">
-                Recomendaciones recientes
-              </h2>
+      {/* Resumen de emociones */}
+      <section className="mb-8">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <h2 className="text-lg font-semibold mb-4">Resumen de emociones</h2>
 
-              {history.length === 0 ? (
-                <p className="text-(--text-gray) text-center py-10">
-                  No hay historial aún. ¡Ve a Analizar y genera recomendaciones!
-                </p>
-              ) : (
-                <div className="
-                  grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4
-                  gap-5 w-full
-                  /* Mobile: Tighter */
-                  max-md:gap-4
-                ">
-                  {history.map((session) => (
-                    <div
-                      key={session.id}
-                      className="
-                        bg-(--bg-secondary) rounded-xl overflow-hidden
-                        shadow-[0_4px_16px_rgba(0,0,0,0.3)]
-                        transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(138,43,226,0.2)]
-                      "
-                    >
-                      <div className="relative w-full h-[200px] overflow-hidden max-md:h-40">
-                        <img
-                          src="/placeholder.jpg"
-                          alt="Recomendación"
-                          className="w-full h-full object-cover"
-                        />
-                        <button
-                          className="
-                            absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                            bg-[rgba(138,43,226,0.8)] rounded-full w-12 h-12
-                            flex items-center justify-center opacity-0 transition-opacity duration-200
-                            border-none cursor-pointer hover:opacity-100
-                          "
-                          title="Abrir primera canción en Spotify"
-                          onClick={() => {
-                            const first = Array.isArray(session.tracks) && session.tracks[0];
-                            if (first) window.open(`https://open.spotify.com/track/${first}`, '_blank');
-                          }}
-                        >
-                          <Play size={24} className="text-white" />
-                        </button>
-                      </div>
+          {loading && summary.list.length === 0 && (
+            <div className="flex gap-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-9 w-40 bg-white/10 rounded animate-pulse" />
+              ))}
+            </div>
+          )}
 
-                      <div className="p-4">
-                        <h3 className="text-base font-semibold text-(--text-primary) m-0 mb-1 leading-tight">
-                          Emoción: {session.emotion}
-                        </h3>
-                        <p className="text-sm text-(--text-gray) m-0 mb-3">
-                          {session.confidence
-                            ? `Confianza: ${(Number(session.confidence) * 100).toFixed(1)}%`
-                            : 'Confianza: N/A'}
-                        </p>
-
-                        <p className="text-xs text-(--text-gray) m-0 mb-3">
-                          {session.created_at
-                            ? new Date(session.created_at).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' })
-                            : ''}
-                        </p>
-
-                        {/* Chips */}
-                        <div className="flex gap-2 mb-3">
-                          <span className="px-2 py-1 text-xs text-(--text-primary) bg-[rgba(138,43,226,0.1)] rounded-full">
-                            {Array.isArray(session.tracks) ? session.tracks.length : 0} canciones
-                          </span>
-                          <span className="px-2 py-1 text-xs text-(--text-primary) bg-[rgba(138,43,226,0.1)] rounded-full">
-                            {Array.isArray(session.playlists) ? session.playlists.length : 0} playlists
-                          </span>
-                        </div>
-
-                        <div className="flex gap-2 justify-end">
-                          <button
-                            className="
-                              bg-transparent border-none text-(--text-gray) p-1 rounded
-                              cursor-pointer transition-colors duration-200 flex items-center justify-center
-                              hover:text-(--accent-violet) hover:bg-[rgba(138,43,226,0.1)]
-                            "
-                            title="Ver detalles (próximamente)"
-                          >
-                            <Edit3 size={16} />
-                          </button>
-                          <button
-                            className="
-                              bg-transparent border-none text-(--text-gray) p-1 rounded
-                              cursor-pointer transition-colors duration-200 flex items-center justify-center
-                              hover:text-(--accent-violet) hover:bg-[rgba(138,43,226,0.1)]
-                            "
-                            title="Más opciones (próximamente)"
-                          >
-                            <MoreVertical size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
+          {!loading && summary.list.length === 0 ? (
+            <p className="text-white/60 text-sm">
+              Aún no hay análisis. ¡Analiza una foto para empezar!
+            </p>
           ) : (
-            // Block for non-logged users
-            <div className="text-center py-16 space-y-4 align-middle items-center">
-              <LogIn size={64} className="mx-auto text-(--accent-violet)" />
-              <h3 className="text-4xl font-semibold text-white mb-2">
-                Inicia sesión para ver tu historial
-              </h3>
-              <p className="text-(--text-gray) mb-6 max-w-md mx-auto">
-                Accede a tus análisis anteriores, emociones dominantes y recomendaciones personalizadas.
-              </p>
-              <div className="flex gap-4 justify-center">
-                <Link
-                  to="/login"
-                  className="
-                    inline-block bg-linear-to-r from-(--accent-violet) to-(--accent-blue)
-                    text-white px-6 py-3 rounded-[10px] font-semibold
-                    shadow-[0_4px_12px_rgba(138,43,226,0.3)]
-                    hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(138,43,226,0.4)]
-                    transition-all duration-200
-                  "
+            <div className="flex flex-wrap gap-2">
+              {summary.list.map((item) => (
+                <div
+                  key={item.emotion}
+                  className="px-3 py-2 rounded-lg bg-white/5 border border-white/10"
                 >
-                  Iniciar Sesión
-                </Link>
-                <Link
-                  to="/login?mode=register"
-                  className="
-                    inline-block bg-linear-to-r from-(--accent-violet)/95 to-(--accent-blue)/25
-                    text-white px-6 py-3 rounded-[10px] font-semibold
-                    shadow-[0_4px_12px_rgba(138,43,226,0.3)]
-                    hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(138,43,226,0.4)]
-                    transition-all duration-200
-                  "
-                >
-                  Crear Cuenta
-                </Link>
-              </div>
+                  <div className="flex items-center gap-2">
+                    <EmotionChip emotion={item.emotion} />
+                    <span className="text-white/80 text-sm font-medium">
+                      {item.count} · {item.pct}%
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
-      </main>
+      </section>
 
-      {/* SongTicker at bottom */}
-      <SongTicker className="
-        fixed bottom-0 left-20 right-0 z-200
-        bg-black/80 backdrop-blur-md p-2.5 overflow-x-auto
-        border-t border-white/10
-        /* Mobile: Full width */
-        max-md:left-0
-      " />
+      {/* Lista de sesiones */}
+      <section className="space-y-4">
+        {loading && (
+          <div className="grid gap-4">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-white/10 bg-white/5 p-4 animate-pulse"
+              >
+                <div className="h-5 w-40 bg-white/10 rounded mb-4" />
+                <div className="flex gap-3">
+                  {[...Array(5)].map((__, j) => (
+                    <div key={j} className="w-14 h-14 bg-white/10 rounded" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!loading &&
+          sessions.map((s) => (
+            <article
+              key={s.id}
+              className="rounded-xl border border-white/10 bg-white/5 p-4"
+            >
+              {/* Cabecera de cada sesión */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <EmotionChip emotion={s.emotion} />
+                  <span className="text-sm text-white/60 flex items-center gap-1">
+                    <Clock size={14} />
+                    {formatDate(s.analyzed_at)}
+                  </span>
+                  <span className="text-sm text-white/60">
+                    · confianza {(Number(s.confidence) * 100).toFixed(0)}%
+                  </span>
+                </div>
+
+                {s.playlist?.url && (
+                  <a
+                    href={s.playlist.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 text-violet-300 hover:text-violet-200 text-sm"
+                  >
+                    Ver playlist
+                    <ExternalLink size={16} />
+                  </a>
+                )}
+              </div>
+
+              {/* Carrusel horizontal de tracks */}
+              <div className="flex gap-4 overflow-x-auto pb-2">
+                {s.tracks?.map((t) => (
+                  <a
+                    key={t.id}
+                    href={t.url || "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="
+                      min-w-[260px] flex items-center gap-3
+                      bg-white/5 border border-white/10 rounded-lg p-2
+                      hover:bg-white/10 transition
+                    "
+                  >
+                    <img
+                      src={t.image}
+                      alt={t.name}
+                      className="w-14 h-14 rounded object-cover flex-shrink-0"
+                      onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">{t.name}</p>
+                      <p className="text-xs text-white/60 truncate">{t.artists}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </article>
+          ))}
+
+        {!loading && sessions.length === 0 && !error && (
+          <p className="text-white/60">
+            Aún no hay resultados. Ve a <span className="text-violet-300">Analizar</span> y genera recomendaciones.
+          </p>
+        )}
+
+        {!loading && error && (
+          <p className="text-rose-300">
+            Ocurrió un error al cargar el historial.
+          </p>
+        )}
+      </section>
     </div>
   );
 }
