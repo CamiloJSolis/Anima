@@ -11,25 +11,26 @@ function signToken(payload){
 }
 
 router.post('/register',
-  body('email').isEmail(),
-  body('password').isLength({ min: 8 }),
+  body('username').isLength({ min: 3 }).withMessage('El usuario debe tener al menos 3 caracteres'), //
+  body('email').isEmail().withMessage('Email inválido'),
+  body('password').isLength({ min: 8 }).withMessage('La contraseña debe tener mínimo 8 caracteres'), //
   async (req,res,next)=>{
     try{
       const errors = validationResult(req);
       if(!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-      const { email, password } = req.body;
+      const { email, password, username } = req.body;
       const exists = await pool.query('SELECT 1 FROM users WHERE email=$1',[email]);
       if(exists.rowCount) return res.status(409).json({ error: 'Email en uso' });
 
       const hash = await bcrypt.hash(password, 12);
       const { rows } = await pool.query(
-        `INSERT INTO users(email,password_hash) VALUES($1,$2)
-         RETURNING user_id,email`,
-        [email, hash]
+        `INSERT INTO users(username, email,password_hash) VALUES($1,$2, $3)
+         RETURNING user_id,email, username`,
+        [username, email, hash]
       );
       const user = rows[0];
-      const token = signToken({ user_id: user.user_id, email: user.email });
+      const token = signToken({ user_id: user.user_id, email: user.email, username: user.username });
       res.cookie('token', token, {
         httpOnly: true, sameSite: 'lax', secure: process.env.COOKIE_SECURE === 'true'
       });

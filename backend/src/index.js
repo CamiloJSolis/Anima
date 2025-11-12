@@ -24,7 +24,9 @@ app.use(cookieParser());
 app.use(morgan('dev'));
 
 
-app.get('/health', (req,res)=>res.json({ ok:true }));
+app.get("/__health", (req, res) => {
+  return res.status(200).json({ ok: true, env: process.env.NODE_ENV || "dev" });
+});
 
 app.use('/auth', authRoutes);
 app.use('/api', analyzeRoutes); 
@@ -37,4 +39,12 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: 'Internal error', details: err.message });
 });
 
-app.listen(process.env.PORT || 4000, () => console.log('API up'));
+// Solo arrancar el listener si no estamos en entorno de test
+if (process.env.NODE_ENV !== "test") {
+  const port = process.env.PORT || 3001;
+  app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+  });
+}
+
+export default app;

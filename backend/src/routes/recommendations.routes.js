@@ -26,7 +26,7 @@ router.post('/', async (req, res, next) => {
 
     const userId = getUserIdFromCookie(req);
 
-    const { tracks, playlists, seeds } = await getRecommendationsForEmotion({
+    const { tracks, seeds } = await getRecommendationsForEmotion({
       userId,
       emotion,
       count: 20,
@@ -42,7 +42,7 @@ router.post('/', async (req, res, next) => {
       seeds
     });
 
-    res.json({ tracks, playlists });
+    res.json({ tracks });
   } catch (e) { next(e); }
 });
 
@@ -60,7 +60,7 @@ router.get('/history', async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { rows } = await pool.query(
-      `SELECT id, emotion, confidence, tracks, playlists, created_at
+      `SELECT id, emotion, confidence, tracks, created_at
        FROM recommendation_sessions
        WHERE user_id=$1
        ORDER BY created_at DESC
@@ -82,7 +82,7 @@ router.get('/weekly-summary', async (req, res, next) => {
 
     const { rows } = await pool.query(
       `WITH last7 AS (
-         SELECT emotion, tracks, playlists, created_at
+         SELECT emotion, tracks, created_at
          FROM recommendation_sessions
          WHERE user_id=$1 AND created_at >= NOW() - INTERVAL '7 days'
        )
