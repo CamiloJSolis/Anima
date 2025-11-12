@@ -1,15 +1,28 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   server: {
     host: '127.0.0.1',
     port: 5173,
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1',
+      '::1',
+      // Cloudflared tunnel hostname
+      '',
+    ],
     proxy: {
       '/auth': 'http://127.0.0.1:4000',
       '/api': 'http://127.0.0.1:4000',
       '/recommendations': 'http://127.0.0.1:4000'
     }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.js', // Ruta al archivo de setup
   }
 });

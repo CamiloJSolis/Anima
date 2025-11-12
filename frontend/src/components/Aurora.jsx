@@ -1,6 +1,5 @@
 import { Renderer, Program, Mesh, Color, Triangle } from 'ogl';
 import { useEffect, useRef } from 'react';
-import '../styles/Aurora.css';
 
 const VERT = `#version 300 es
 in vec2 position;
@@ -130,14 +129,16 @@ export default function Aurora(props) {
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.canvas.style.backgroundColor = 'transparent';
 
-    let program = null;
+    let program;
 
     function resize() {
-      if (!ctn || !program) return;
+      if (!ctn) return;
       const width = ctn.offsetWidth;
       const height = ctn.offsetHeight;
       renderer.setSize(width, height);
-      program.uniforms.uResolution.value = [width, height];
+      if (program) {
+        program.uniforms.uResolution.value = [width, height];
+      }
     }
     window.addEventListener('resize', resize);
 
@@ -167,10 +168,8 @@ export default function Aurora(props) {
     ctn.appendChild(gl.canvas);
 
     let animateId = 0;
-    const update = (t) => {
+    const update = t => {
       animateId = requestAnimationFrame(update);
-      if (!program) return;
-      
       const { time = t * 0.01, speed = 1.0 } = propsRef.current;
       program.uniforms.uTime.value = time * speed * 0.1;
       program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0;
@@ -194,7 +193,8 @@ export default function Aurora(props) {
       }
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amplitude]);
 
-  return <div ref={ctnDom} className="aurora-container" />;
+  return <div ref={ctnDom} className="w-full h-full" />;
 }
