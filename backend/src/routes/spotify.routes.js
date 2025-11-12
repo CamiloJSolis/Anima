@@ -9,8 +9,8 @@ const router = Router();
 router.get('/start', (req, res) => {
   const scopes = [
     'user-read-email',
-    'playlist-modify-public',
-    'playlist-modify-private'
+    //'playlist-modify-public',
+    //'playlist-modify-private'
   ].join(' ');
 
   const params = new URLSearchParams({

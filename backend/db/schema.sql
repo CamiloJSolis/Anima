@@ -3,7 +3,7 @@ BEGIN;
 -- BORRADO ORDENADO (solo si quieres reset)
 DROP TABLE IF EXISTS user_item_memory CASCADE;
 DROP TABLE IF EXISTS recommendation_sessions CASCADE;
-DROP TABLE IF EXISTS analysis_history CASCADE;
+DROP TABLE IF EXISTS user_item_memory CASCADE;
 DROP TABLE IF EXISTS linked_accounts CASCADE;
 DROP TABLE IF EXISTS user_emotions CASCADE;
 DROP TABLE IF EXISTS emotions CASCADE;
@@ -66,34 +66,38 @@ CREATE TABLE IF NOT EXISTS linked_accounts (
 );
 
 -- Historial de análisis (tu tabla actual)
+-- En 'analysis_history':
+-- Cambiamos 'playlist_id' y 'playlist_url' por un array de IDs de canciones.
 CREATE TABLE IF NOT EXISTS analysis_history (
   analysis_id BIGSERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   emotion_id INTEGER REFERENCES emotions(emotion_id) ON DELETE RESTRICT NOT NULL,
   confidence DECIMAL(5,4) NOT NULL CHECK (confidence BETWEEN 0 AND 1),
-  playlist_id VARCHAR(50) NOT NULL,
-  playlist_url TEXT NOT NULL,
+  track_ids TEXT[] NOT NULL, -- <-- CAMBIADO
   analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Historial de recomendaciones por emoción (nueva)
+-- En 'recommendation_sessions':
+-- Eliminamos la columna 'playlists'
 CREATE TABLE IF NOT EXISTS recommendation_sessions (
   id BIGSERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,  -- NULL si invitado
   emotion VARCHAR(50) NOT NULL,
   confidence DECIMAL(5,4) CHECK (confidence BETWEEN 0 AND 1),
   tracks TEXT[],
-  playlists TEXT[],
+  -- playlists TEXT[], <-- ELIMINADO
   seed JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Memoria por usuario/emoción para evitar repeticiones (nuevo)
+-- En 'user_item_memory':
+-- Simplificamos el CHECK para que SOLO permita 'track'
+
 CREATE TABLE IF NOT EXISTS user_item_memory (
   id BIGSERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
   emotion VARCHAR(50) NOT NULL,
-  item_type VARCHAR(20) NOT NULL CHECK (item_type IN ('track','playlist')),
+  item_type VARCHAR(20) NOT NULL CHECK (item_type IN ('track')), -- <-- CAMBIADO
   item_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
