@@ -4,7 +4,7 @@ import { pool } from '../db/pool.js';
 import jwt from 'jsonwebtoken';
 import {
   exchangeCodeForTokens,
-  refreshAccessToken,        // lo sigues teniendo por si lo usan en otro lado
+  refreshAccessToken,        // lo dejamos por si se usa en otro lado
   getClientCredentialsToken,
   spotifyGet,
 } from '../services/spotify.service.js';
@@ -54,7 +54,7 @@ router.get('/callback', async (req, res, next) => {
     const tokenCookie = req.cookies?.token;
 
     if (tokenCookie) {
-      // Usuario YA logueado en tu app → Vincular cuenta Spotify
+      // Usuario YA logueado → Vincular cuenta Spotify
       const payload = jwt.verify(tokenCookie, process.env.JWT_SECRET);
       const userId = payload.user_id;
 
@@ -73,7 +73,6 @@ router.get('/callback', async (req, res, next) => {
     }
 
     // Usuario NO logueado → “Login con Spotify”
-    // 1) buscamos si ya existe una cuenta vinculada con ese provider_user_id
     const link = await pool.query(
       `SELECT la.user_id, u.email, u.username
        FROM linked_accounts la
@@ -86,7 +85,6 @@ router.get('/callback', async (req, res, next) => {
     let userId;
     if (link.rowCount) {
       userId = link.rows[0].user_id;
-      // actualiza tokens
       await pool.query(
         `UPDATE linked_accounts
          SET access_token=$1,
@@ -169,20 +167,20 @@ router.get('/top-tracks', async (req, res, next) => {
     }
 
     const market = process.env.SPOTIFY_MARKET || 'MX';
-    /*Por si queremos el limite*/ 
+
+    // Límite controlado por query (?limit=1..50), default 10
     const limit = Math.min(
       Math.max(parseInt(req.query.limit, 10) || 10, 1),
       50
     );
-    // 1) Token en modo client_credentials (no depende del usuario)
+
+    // 1) Token app (client_credentials)
     const tokenData = await getClientCredentialsToken();
     const accessToken = tokenData.access_token;
 
     // 2) Leer la playlist
-    const playlist = await spotifyGet(`/playlists/${playlistId}`, accessToken, {
-      market,
-    });
-    /* Cambiar por numero o limite*/
+    const playlist = await spotifyGet(`/playlists/${playlistId}`, accessToken, { market });
+
     const items = (playlist.tracks?.items || []).slice(0, limit);
 
     const tracks = items.map((item) => {

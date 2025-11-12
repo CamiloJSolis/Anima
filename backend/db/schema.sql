@@ -1,15 +1,21 @@
--- ...existing code...
-DROP TABLE IF EXISTS users CASCADE;
-DROP TABLE IF EXISTS emotions;
-DROP TABLE IF EXISTS user_emotions CASCADE;
-DROP TABLE IF EXISTS error_logs;
-DROP TABLE IF EXISTS linked_accounts CASCADE;
-DROP TABLE IF EXISTS analysis_history CASCADE;
+BEGIN;
 
+-- BORRADO ORDENADO (solo si quieres reset)
+DROP TABLE IF EXISTS user_item_memory CASCADE;
+DROP TABLE IF EXISTS recommendation_sessions CASCADE;
+DROP TABLE IF EXISTS user_item_memory CASCADE;
+DROP TABLE IF EXISTS linked_accounts CASCADE;
+DROP TABLE IF EXISTS user_emotions CASCADE;
+DROP TABLE IF EXISTS emotions CASCADE;
+DROP TABLE IF EXISTS error_logs CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+-- BASE
 CREATE TABLE IF NOT EXISTS users (
   user_id SERIAL PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,         -- añadido
   email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,  -- Para bcrypt o argon2
+  password_hash VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   last_login TIMESTAMP
 );
@@ -17,10 +23,10 @@ CREATE TABLE IF NOT EXISTS users (
 -- Catálogo de emociones
 CREATE TABLE IF NOT EXISTS emotions (
   emotion_id SERIAL PRIMARY KEY,
-  emotion VARCHAR(50) UNIQUE NOT NULL  -- evita duplicados
+  emotion VARCHAR(50) UNIQUE NOT NULL
 );
 
--- 3. instancias de emociones por usuario
+-- instancias de emociones por usuario
 CREATE TABLE IF NOT EXISTS user_emotions (
   user_emotion_id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE NOT NULL,
@@ -29,22 +35,23 @@ CREATE TABLE IF NOT EXISTS user_emotions (
   timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Auditoria y debugging
+-- Auditoría
 CREATE TABLE IF NOT EXISTS error_logs (
-    error_log_id BIGSERIAL PRIMARY KEY,
-    occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), -- Momento del error
-    method VARCHAR(10), -- GET/POST/PUT/DELETE
-    path TEXT, -- Ruta de la petición
-    status_code INT, -- Código de respuesta (p.ej., 400/404/500)
-    message TEXT, -- Mensaje de error
-    stack TEXT, -- Stack trace (oculto en prod)
-    ip INET, -- IP del cliente
-    user_agent TEXT, -- Navegador/cliente
-    body JSONB, -- Cuerpo de la solicitud
-    params JSONB, -- Parámetros de ruta
-    query JSONB -- Querystring
+  error_log_id BIGSERIAL PRIMARY KEY,
+  occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  method VARCHAR(10),
+  path TEXT,
+  status_code INT,
+  message TEXT,
+  stack TEXT,
+  ip INET,
+  user_agent TEXT,
+  body JSONB,
+  params JSONB,
+  query JSONB
 );
 
+-- Cuentas vinculadas (Spotify)
 CREATE TABLE IF NOT EXISTS linked_accounts (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
@@ -58,27 +65,48 @@ CREATE TABLE IF NOT EXISTS linked_accounts (
   UNIQUE(provider, provider_user_id)
 );
 
--- Historial final de análisis (Rekognition + Spotify)
+-- Historial de análisis (tu tabla actual)
+-- En 'analysis_history':
+-- Cambiamos 'playlist_id' y 'playlist_url' por un array de IDs de canciones.
 CREATE TABLE IF NOT EXISTS analysis_history (
-    analysis_id BIGSERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    -- Resultado del Análisis de Emoción
-    emotion_id INTEGER REFERENCES emotions(emotion_id) ON DELETE RESTRICT NOT NULL,
-    confidence DECIMAL(5,4) NOT NULL CHECK (confidence BETWEEN 0 AND 1),
-    -- Resultado de la integración con Spotify
-    playlist_id VARCHAR(50) NOT NULL,
-    playlist_url TEXT NOT NULL,
-    -- Metadatos
-    analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  analysis_id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  emotion_id INTEGER REFERENCES emotions(emotion_id) ON DELETE RESTRICT NOT NULL,
+  confidence DECIMAL(5,4) NOT NULL CHECK (confidence BETWEEN 0 AND 1),
+  track_ids TEXT[] NOT NULL, -- <-- CAMBIADO
+  analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Precarga de las emociones estándar detectadas por AWS Rekognition
+-- En 'recommendation_sessions':
+-- Eliminamos la columna 'playlists'
+CREATE TABLE IF NOT EXISTS recommendation_sessions (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,  -- NULL si invitado
+  emotion VARCHAR(50) NOT NULL,
+  confidence DECIMAL(5,4) CHECK (confidence BETWEEN 0 AND 1),
+  tracks TEXT[],
+  -- playlists TEXT[], <-- ELIMINADO
+  seed JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- En 'user_item_memory':
+-- Simplificamos el CHECK para que SOLO permita 'track'
+
+CREATE TABLE IF NOT EXISTS user_item_memory (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+  emotion VARCHAR(50) NOT NULL,
+  item_type VARCHAR(20) NOT NULL CHECK (item_type IN ('track')), -- <-- CAMBIADO
+  item_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_user_item_memory
+  ON user_item_memory(user_id, emotion, item_type, created_at DESC);
+
+-- Precarga de emociones estándar (como tenías)
 INSERT INTO emotions (emotion) VALUES 
-('HAPPY'), 
-('SAD'), 
-('ANGRY'), 
-('FEAR'),
-('SURPRISE'), 
-('CALM'), 
-('CONFUSED'), 
-('DISGUST');
+('HAPPY'),('SAD'),('ANGRY'),('FEAR'),('SURPRISE'),('CALM'),('CONFUSED'),('DISGUST')
+ON CONFLICT (emotion) DO NOTHING;
+
+COMMIT;
