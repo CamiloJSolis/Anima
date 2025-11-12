@@ -92,7 +92,8 @@ export async function persistRecommendationSession({
     ? tracks.map((t) => (typeof t === "string" ? t : t.id)).filter(Boolean)
     : [];
 
-  await pool.query(
+await pool.query(
+    // --- CAMBIO AQUÍ: Eliminado 'playlists' del INSERT ---
     `INSERT INTO recommendation_sessions(user_id, emotion, confidence, tracks, seed)
      VALUES($1,$2,$3,$4,$5)`,
     [userId, emotion, confidence, trackIds, seeds]

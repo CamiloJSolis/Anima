@@ -4,7 +4,7 @@ import { pool } from '../db/pool.js';
 import jwt from 'jsonwebtoken';
 import {
   exchangeCodeForTokens,
-  refreshAccessToken,        // lo sigues teniendo por si lo usan en otro lado
+  refreshAccessToken,        // por si lo usas en otro lado
   getClientCredentialsToken,
   spotifyGet,
 } from '../services/spotify.service.js';
@@ -18,8 +18,8 @@ const router = Router();
 router.get('/start', (req, res) => {
   const scopes = [
     'user-read-email',
-    'playlist-modify-public',
-    'playlist-modify-private',
+    // 'playlist-modify-public',
+    // 'playlist-modify-private',
   ].join(' ');
 
   const params = new URLSearchParams({
@@ -40,21 +40,21 @@ router.get('/start', (req, res) => {
  */
 router.get('/callback', async (req, res, next) => {
   try {
-    const { code, state } = req.query;
+    const { code } = req.query;
     if (!code) return res.status(400).send('Missing code');
 
     const tokens = await exchangeCodeForTokens(code);
     const { access_token, refresh_token } = tokens;
 
-    // Datos del perfil del usuario en Spotify
+    // Perfil de Spotify
     const me = await spotifyGet('/me', access_token);
     const provider_user_id = me.id;
-    const email = me.email; // puede ser null
+    const email = me.email; // puede venir null
 
     const tokenCookie = req.cookies?.token;
 
     if (tokenCookie) {
-      // Usuario YA logueado en tu app → Vincular cuenta Spotify
+      // Usuario YA logueado → Vincular cuenta Spotify
       const payload = jwt.verify(tokenCookie, process.env.JWT_SECRET);
       const userId = payload.user_id;
 
@@ -73,7 +73,6 @@ router.get('/callback', async (req, res, next) => {
     }
 
     // Usuario NO logueado → “Login con Spotify”
-    // 1) buscamos si ya existe una cuenta vinculada con ese provider_user_id
     const link = await pool.query(
       `SELECT la.user_id, u.email, u.username
        FROM linked_accounts la
@@ -86,7 +85,7 @@ router.get('/callback', async (req, res, next) => {
     let userId;
     if (link.rowCount) {
       userId = link.rows[0].user_id;
-      // actualiza tokens
+
       await pool.query(
         `UPDATE linked_accounts
          SET access_token=$1,
@@ -159,49 +158,81 @@ router.get('/callback', async (req, res, next) => {
 
 /**
  * 3) Endpoint para el carrusel: top tracks de una playlist pública
- * GET /auth/spotify/top-tracks
+ * GET /auth/spotify/top-tracks?playlistId=XXXX&limit=20
  */
 router.get('/top-tracks', async (req, res, next) => {
   try {
-    const playlistId = process.env.SPOTIFY_PLAYLIST_ID;
+    let playlistId = req.query.playlistId || process.env.SPOTIFY_PLAYLIST_ID;
     if (!playlistId) {
-      return res.status(500).json({ error: 'Falta SPOTIFY_PLAYLIST_ID en .env' });
+      return res.status(500).json({ error: 'Falta SPOTIFY_PLAYLIST_ID o ?playlistId' });
     }
 
+    // Si viene como URL completa, extrae el ID
+    const m = /playlist\/([A-Za-z0-9]+)/.exec(playlistId);
+    if (m) playlistId = m[1];
+
     const market = process.env.SPOTIFY_MARKET || 'MX';
-    /*Por si queremos el limite*/ 
-    const limit = Math.min(
-      Math.max(parseInt(req.query.limit, 10) || 10, 1),
-      50
-    );
-    // 1) Token en modo client_credentials (no depende del usuario)
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 50);
+
+    // 1) Token app (no depende del usuario)
     const tokenData = await getClientCredentialsToken();
     const accessToken = tokenData.access_token;
 
     // 2) Leer la playlist
-    const playlist = await spotifyGet(`/playlists/${playlistId}`, accessToken, {
-      market,
-    });
-    /* Cambiar por numero o limite*/
+    const playlist = await spotifyGet(`/playlists/${playlistId}`, accessToken, { market });
     const items = (playlist.tracks?.items || []).slice(0, limit);
 
-    const tracks = items.map((item) => {
-      const track = item.track;
-      return {
-        id: track.id,
-        name: track.name,
-        artists: track.artists.map((a) => a.name).join(', '),
-        image: track.album.images?.[0]?.url ?? null,
-        url: track.external_urls?.spotify ?? null,
-      };
-    });
+    // 3) Adaptar al shape que consume el frontend
+    const tracks = items
+      .map((it) => it?.track)
+      .filter(Boolean)
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        artists: (t.artists || []).map((a) => a.name).join(', '),
+        image: t.album?.images?.[0]?.url || null,
+        url: t.external_urls?.spotify || null,
+      }));
 
     return res.json({ tracks });
   } catch (e) {
-    console.error('Error en /auth/spotify/top-tracks:', e.response?.data || e.message);
-    if (next) return next(e);
-    return res.status(500).json({ error: 'No se pudieron obtener canciones de Spotify' });
+    console.error('Error en /auth/spotify/top-tracks:', e?.response?.data || e.message);
+    return next(e);
   }
 });
+
+
+
+// === Nuevo: resolver varios tracks por id ===
+// GET /auth/spotify/tracks?ids=ID1,ID2,...&market=MX
+router.get('/tracks', async (req, res, next) => {
+  try {
+    const raw = (req.query.ids || '').toString();
+    const ids = raw.split(',').map(s => s.trim()).filter(Boolean).slice(0, 50);
+    if (ids.length === 0) return res.status(400).json({ error: 'ids required' });
+
+    const market = (req.query.market || process.env.SPOTIFY_MARKET || 'MX').toString();
+
+    const tokenData = await getClientCredentialsToken();
+    const accessToken = tokenData.access_token;
+
+    const data = await spotifyGet(`/tracks`, accessToken, { ids: ids.join(','), market });
+
+    const tracks = (data.tracks || []).map(t => ({
+      id: t?.id,
+      name: t?.name,
+      artists: (t?.artists || []).map(a => a.name).join(', '),
+      image: t?.album?.images?.[0]?.url || null,
+      url: t?.external_urls?.spotify || null,
+      duration_ms: t?.duration_ms ?? null
+    }));
+
+    return res.json({ tracks });
+  } catch (e) {
+    console.error('Error /auth/spotify/tracks:', e.response?.data || e.message);
+    return next(e);
+  }
+});
+
 
 export default router;

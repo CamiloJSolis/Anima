@@ -3,78 +3,67 @@ import React, { useEffect, useState } from "react";
 import "../styles/SongTicker.css";
 import { getSpotifyTopTracks } from "../services/api.js";
 
-// Fallback por si falla la API de Spotify
+// Fallback por si falla Spotify
 const fallbackSongs = [
-  { title: "Breathe Me",    artist: "Sia",             image: "sia.jpg" },
-  { title: "Cinnamon Girl", artist: "Lana Del Rey",    image: "Cinnamon Girl.jpg" },
-  { title: "Rap God",       artist: "Eminem",          image: "placeholder.jpg" },
-  { title: "Faded",         artist: "Alan Walker",     image: "Faded.jpg" },
-  { title: "Country Song",  artist: "Miranda Lambert", image: "Country Song.jpg" },
-  { title: "Diamonds",      artist: "Rihanna",         image: "Diamonds.jpg" },
-  { title: "Bad Guy",       artist: "Billie Eilish",   image: "Bad Guy.jpg" },
+  { title: "Breathe Me",    artist: "Sia",             image: "/placeholder.jpg" },
+  { title: "Cinnamon Girl", artist: "Lana Del Rey",    image: "/placeholder.jpg" },
+  { title: "Rap God",       artist: "Eminem",          image: "/placeholder.jpg" },
+  { title: "Faded",         artist: "Alan Walker",     image: "/placeholder.jpg" },
+  { title: "Country Song",  artist: "Miranda Lambert", image: "/placeholder.jpg" },
+  { title: "Diamonds",      artist: "Rihanna",         image: "/placeholder.jpg" },
+  { title: "Bad Guy",       artist: "Billie Eilish",   image: "/placeholder.jpg" },
 ];
 
-const SongTicker = () => {
+export default function SongTicker() {
   const [songs, setSongs] = useState(fallbackSongs);
 
   useEffect(() => {
-    let isMounted = true;
+    let alive = true;
 
-    const fetchSongs = async () => {
+    (async () => {
       try {
         const tracks = await getSpotifyTopTracks();
+        if (!alive || !Array.isArray(tracks) || tracks.length === 0) return;
 
-        if (!isMounted || !tracks || tracks.length === 0) return;
-
-        // Adaptamos los campos al shape que usa el componente
         const mapped = tracks.map((t) => ({
           title: t.name,
           artist: t.artists,
-          image: t.image || null,     // si no hay imagen, no se muestra la <img>
+          image: t.image || "/placeholder.jpg",
           url: t.url || null,
         }));
-
         setSongs(mapped);
-      } catch (err) {
-        console.error(
-          "No se pudieron cargar canciones de Spotify, usando fallback:",
-          err
-        );
-        // Si falla, se queda con fallbackSongs
+      } catch (e) {
+        console.error("Spotify falló, usando fallback:", e?.message || e);
       }
-    };
+    })();
 
-    fetchSongs();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { alive = false; };
   }, []);
 
-  // Trucazo para que el carrusel se vea continuo: repetir la lista
-  const displaySongs = [...songs, ...songs, ...songs];
+  // Para que se vea continuo
+  const display = [...songs, ...songs, ...songs];
 
   return (
     <div className="song-ticker">
       <div className="ticker-container">
         <div className="ticker-content">
-          {displaySongs.map((song, index) => (
+          {display.map((s, i) => (
             <a
-              key={index}
+              key={i}
               className="ticker-item-image"
-              href={song.url || "#"}
-              target={song.url ? "_blank" : undefined}
-              rel={song.url ? "noreferrer" : undefined}
+              href={s.url || "#"}
+              target={s.url ? "_blank" : undefined}
+              rel={s.url ? "noreferrer" : undefined}
             >
-              {song.image && (
+              {s.image && (
                 <img
-                  src={song.image}
-                  alt={`${song.title} - ${song.artist}`}
+                  src={s.image}
+                  alt={`${s.title} - ${s.artist}`}
                   className="ticker-image"
                 />
               )}
               <span className="ticker-text">
-                {song.title} - {song.artist}
+                {s.title} - {s.artist}
               </span>
               <span className="separator">★</span>
             </a>
@@ -83,6 +72,4 @@ const SongTicker = () => {
       </div>
     </div>
   );
-};
-
-export default SongTicker;
+}

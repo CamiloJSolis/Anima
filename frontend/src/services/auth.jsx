@@ -1,67 +1,58 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { api } from './api'; // Reactivamos la API
+// /frontend/src/services/auth.jsx
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { apiGetMe, apiLogout } from "./api.js";
 
 const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
-  // --- 1. Estado inicial (vuelve a la normalidad) ---
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true); // Vuelve a 'true'
+  const [loading, setLoading] = useState(true); // carga inicial
 
-  // --- 2. useEffect (REACTIVADO) ---
-  // Esto buscará una sesión real en el backend al cargar la app
+  // Cargar sesión al montar
   useEffect(() => {
-    api.get('/auth/me')
-      .then(res => {
-        if (res.data?.user) {
-          setIsAuthenticated(true);
-          setUser(res.data.user);
-        }
-      })
-      .catch(() => {
-        // Si hay error (no token, token inválido), se asegura de estar deslogueado
-        setIsAuthenticated(false);
+    (async () => {
+      try {
+        const me = await apiGetMe();
+        setUser(me);
+      } catch {
         setUser(null);
-      })
-      .finally(() => {
-        // Pase lo que pase, marca la carga como terminada
-        setIsLoading(false);
-      });
-  }, []); // El array vacío [] significa que solo se ejecuta 1 vez al inicio
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
+  const isAuthenticated = !!user;
 
-  // Funciones de login y logout (sin cambios)
+  const refreshUser = async () => {
+    const me = await apiGetMe();
+    setUser(me);
+    return me;
+  };
+
   const login = (userData) => {
+    // útil si en algún punto haces login con formulario y recibes el user
     setUser(userData);
-    setIsAuthenticated(true);
-    // Aquí puedes añadir la lógica para guardar el token si tu backend lo usa
   };
 
-  const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
-    // Aquí puedes añadir la lógica para borrar el token
+  const logout = async () => {
+    try {
+      await apiLogout();
+    } finally {
+      setUser(null);
+    }
   };
 
-  // --- 3. Pantalla de Carga (REACTIVADA) ---
-  // Muestra "Cargando..." mientras el useEffect de arriba termina
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-(--bg-primary) flex items-center justify-center">
-        <p className="text-white text-xl">Cargando...</p>
-      </div>
-    );
-  }
+  const value = {
+    user,
+    loading,
+    isAuthenticated,
+    refreshUser,
+    login,
+    logout,
+  };
 
-  // Pasa el estado real a la aplicación
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, isLoading }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);
