@@ -1,136 +1,290 @@
 // /frontend/src/pages/Profile.jsx
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../services/auth.jsx";
-import { UserRound, Mail, AtSign, Calendar, Edit2, Lock, Camera } from "lucide-react";
-
-function initialsFrom(user) {
-  const base =
-    user?.name || user?.username || user?.email?.split("@")[0] || "Usuario";
-  const p = base.trim().split(/\s+/);
-  return ((p[0]?.[0] || "") + (p[1]?.[0] || "")).toUpperCase() || "US";
-}
+import { updateProfile, changePassword } from "../services/api.js";
+import { Edit2, Lock, X, Loader2 } from "lucide-react";
 
 export default function Profile() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-(--bg-primary) text-white grid place-items-center">
-        <p className="opacity-80">Cargando perfil…</p>
-      </div>
-    );
+const [mode, setMode] = useState("view"); // 'view' | 'edit' | 'password'
+const [banner, setBanner] = useState(null); // { type:'ok'|'err', msg:string } | null
+
+  // Loading flags
+  const [saving, setSaving] = useState(false);
+  const [changing, setChanging] = useState(false);
+
+  // Form state
+  const [form, setForm] = useState({
+    name: "",
+    lastName: "",
+    username: "",
+  });
+
+  const [pwd, setPwd] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  useEffect(() => {
+    setForm({
+      name: user?.name || "",
+      lastName: user?.lastName || "",
+      username: user?.username || "",
+    });
+  }, [user]);
+
+  const initials = useMemo(() => {
+    const a = (user?.username || user?.email || "U")[0] || "U";
+    return String(a).toUpperCase();
+  }, [user]);
+
+  function closeBanner() {
+    setBanner(null);
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-(--bg-primary) text-white grid place-items-center">
-        <div className="text-center">
-          <UserRound className="mx-auto mb-3" size={56} />
-          <p className="text-lg">No se ha encontrado información del usuario.</p>
-        </div>
-      </div>
-    );
+  async function onSaveProfile(e) {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      await updateProfile({
+        name: form.name.trim(),
+        lastName: form.lastName.trim(),
+        username: form.username.trim(),
+      });
+      setBanner({ type: "ok", msg: "Perfil actualizado correctamente." });
+      setMode("view");
+    } catch (err) {
+      setBanner({ type: "err", msg: "No se pudo actualizar el perfil." });
+    } finally {
+      setSaving(false);
+    }
   }
 
-  const displayName = user?.username || user?.name || "usuario";
-  const email = user?.email || "—";
-  const memberSince = user?.created_at || user?.member_since || user?.joined_at;
+  async function onChangePassword(e) {
+    e.preventDefault();
+    if (pwd.newPassword !== pwd.confirmPassword) {
+      setBanner({ type: "err", msg: "Las contraseñas no coinciden." });
+      return;
+    }
+    try {
+      setChanging(true);
+      await changePassword({
+        currentPassword: pwd.currentPassword,
+        newPassword: pwd.newPassword,
+      });
+      setBanner({ type: "ok", msg: "Contraseña actualizada." });
+      setPwd({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setMode("view");
+    } catch (err) {
+      setBanner({ type: "err", msg: "No se pudo cambiar la contraseña." });
+    } finally {
+      setChanging(false);
+    }
+  }
 
   return (
     <div className="
       min-h-screen bg-(--bg-primary) text-(--text-primary) font-(--font-family)
-      flex flex-col relative
-      ml-20 w-[calc(100%-80px)] p-10
-      max-md:ml-0 max-md:w-full max-md:pt-20 max-md:pb-24 max-md:p-6
+      ml-20 w-[calc(100%-80px)] max-md:ml-0 max-md:w-full max-md:pt-20 max-md:pb-24
     ">
-      <h1 className="text-4xl font-bold mb-8 text-white max-md:text-3xl">Mi Perfil</h1>
+      <div className="px-4 md:px-6 pt-6">
+        <h1 className="text-4xl font-bold text-white mb-6 max-md:text-3xl">Mi Perfil</h1>
 
-      <div className="flex flex-col md:flex-row gap-8 max-w-[1000px] w-full mx-auto md:mx-0">
-        {/* Tarjeta izquierda */}
-        <section className="flex flex-col items-center p-6 bg-[rgba(30,30,50,0.5)] backdrop-blur-md border border-white/10 rounded-lg shadow-xl md:w-1/3">
-          <div className="relative w-40 h-40 rounded-full overflow-hidden mb-4 border-2 border-(--accent-violet) grid place-items-center bg-(--accent-violet)">
-            <span className="text-5xl font-extrabold text-white select-none">
-              {initialsFrom(user)}
-            </span>
+        {/* Banner */}
+        {banner && (
+          <div
+            className={`mb-6 px-4 py-3 rounded-lg border flex items-start gap-3 max-w-[1100px] mx-auto
+              ${banner.type === "ok"
+                ? "bg-green-900/20 border-green-700 text-green-200"
+                : "bg-red-900/20 border-red-700 text-red-200"}`}
+          >
+            <span className="leading-6">{banner.msg}</span>
             <button
-              className="absolute bottom-1 right-1 bg-(--accent-violet) p-2 rounded-full text-white/90 hover:text-white/100"
-              title="Cambiar foto (pendiente)"
+              onClick={closeBanner}
+              className="ml-auto opacity-80 hover:opacity-100 transition"
+              aria-label="Cerrar alerta"
             >
-              <Camera size={18} />
+              <X size={18} />
             </button>
           </div>
+        )}
 
-          <h2 className="text-2xl font-semibold text-white mb-2">{displayName}</h2>
-          <p className="text-md text-gray-400 mb-6">{email}</p>
+        {/* Canvas central */}
+        <section className="w-full max-w-[1100px] mx-auto grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-6">
 
-          <div className="flex flex-col gap-3 w-full">
-            <button
-              className="flex items-center gap-3 px-4 py-2 bg-[rgba(138,43,226,0.2)] text-(--accent-violet) rounded-md transition-colors hover:bg-[rgba(138,43,226,0.3)]"
-              onClick={() => alert("Editar perfil (pendiente)")}
-            >
-              <Edit2 size={18} />
-              Editar Perfil
-            </button>
-            <button
-              className="flex items-center gap-3 px-4 py-2 bg-[rgba(138,43,226,0.2)] text-(--accent-violet) rounded-md transition-colors hover:bg-[rgba(138,43,226,0.3)]"
-              onClick={() => alert("Cambiar contraseña (pendiente)")}
-            >
-              <Lock size={18} />
-              Cambiar Contraseña
-            </button>
-          </div>
-        </section>
-
-        {/* Tarjeta derecha */}
-        <section className="flex-1 p-6 bg-[rgba(30,30,50,0.5)] backdrop-blur-md border border-white/10 rounded-lg shadow-xl">
-          <h3 className="text-2xl font-semibold text-white mb-6">Detalles de la Cuenta</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-400 flex items-center gap-2 mb-1">
-                <UserRound size={16} /> Nombre
-              </label>
-              <p className="text-lg text-white font-medium break-words">
-                {user?.name || "No especificado"}
-              </p>
+          {/* Columna izquierda */}
+          <aside className="bg-[rgba(30,30,50,0.5)] border border-white/10 rounded-xl p-6 backdrop-blur-md">
+            <div className="w-36 h-36 rounded-full bg-(--accent-violet)/70 text-white text-5xl grid place-items-center mx-auto mb-4">
+              {initials}
             </div>
+            <p className="text-center text-white font-semibold text-lg mb-1">
+              {user?.username || "usuario"}
+            </p>
+            <p className="text-center text-(--text-gray) text-sm mb-6">{user?.email}</p>
 
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-400 flex items-center gap-2 mb-1">
-                <UserRound size={16} /> Apellido
-              </label>
-              <p className="text-lg text-white font-medium break-words">
-                {user?.lastName || "No especificado"}
-              </p>
+            <div className="flex flex-col gap-3">
+              {mode !== "edit" && (
+                <button
+                  onClick={() => setMode("edit")}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+                             bg-(--accent-violet)/20 text-(--accent-violet) hover:bg-(--accent-violet)/30 transition"
+                >
+                  <Edit2 size={18} /> Editar Perfil
+                </button>
+              )}
+              {mode !== "password" && (
+                <button
+                  onClick={() => setMode("password")}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+                             bg-white/10 text-white hover:bg-white/15 transition"
+                >
+                  <Lock size={18} /> Cambiar Contraseña
+                </button>
+              )}
+              {mode !== "view" && (
+                <button
+                  onClick={() => setMode("view")}
+                  className="px-4 py-2 rounded-lg bg-white/5 text-(--text-gray) hover:bg-white/10 transition"
+                >
+                  Cerrar
+                </button>
+              )}
             </div>
+          </aside>
 
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-400 flex items-center gap-2 mb-1">
-                <Mail size={16} /> Email
-              </label>
-              <p className="text-lg text-white font-medium break-words">{email}</p>
-            </div>
+          {/* Columna derecha */}
+          <main className="bg-[rgba(30,30,50,0.5)] border border-white/10 rounded-xl p-6 backdrop-blur-md min-w-0">
+            {/* VIEW */}
+            {mode === "view" && (
+              <>
+                <h2 className="text-2xl font-semibold text-white mb-6">Detalles de la Cuenta</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field label="Nombre" value={user?.name || "No especificado"} />
+                  <Field label="Apellido" value={user?.lastName || "No especificado"} />
+                  <Field label="Usuario" value={user?.username || "No especificado"} />
+                  <Field label="Miembro desde" value={user?.created_at ? new Date(user.created_at).toLocaleDateString() : "Desconocido"} />
+                </div>
+              </>
+            )}
 
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-400 flex items-center gap-2 mb-1">
-                <AtSign size={16} /> Nombre de Usuario
-              </label>
-              <p className="text-lg text-white font-medium break-words">
-                {user?.username || displayName}
-              </p>
-            </div>
+            {/* EDIT */}
+            {mode === "edit" && (
+              <form onSubmit={onSaveProfile} className="space-y-6">
+                <h2 className="text-2xl font-semibold text-white">Editar datos</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Nombre"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                  <Input
+                    label="Apellido"
+                    value={form.lastName}
+                    onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                  />
+                  <Input
+                    label="Usuario"
+                    value={form.username}
+                    onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  />
+                </div>
 
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-400 flex items-center gap-2 mb-1">
-                <Calendar size={16} /> Miembro desde
-              </label>
-              <p className="text-lg text-white font-medium">
-                {memberSince ? new Date(memberSince).toLocaleDateString() : "Desconocido"}
-              </p>
-            </div>
-          </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-5 py-2 rounded-lg bg-(--accent-violet) text-white hover:opacity-90 disabled:opacity-60"
+                  >
+                    {saving ? <span className="inline-flex items-center gap-2"><Loader2 className="animate-spin" size={16}/> Guardando</span> : "Guardar cambios"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("view")}
+                    className="px-5 py-2 rounded-lg bg-white/10 text-(--text-primary) hover:bg-white/15"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* PASSWORD */}
+            {mode === "password" && (
+              <form onSubmit={onChangePassword} className="space-y-6">
+                <h2 className="text-2xl font-semibold text-white">Cambiar contraseña</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Contraseña actual"
+                    type="password"
+                    value={pwd.currentPassword}
+                    onChange={(e) => setPwd({ ...pwd, currentPassword: e.target.value })}
+                  />
+                  <div className="grid grid-cols-1 gap-4">
+                    <Input
+                      label="Nueva contraseña"
+                      type="password"
+                      value={pwd.newPassword}
+                      onChange={(e) => setPwd({ ...pwd, newPassword: e.target.value })}
+                    />
+                    <Input
+                      label="Confirmar nueva"
+                      type="password"
+                      value={pwd.confirmPassword}
+                      onChange={(e) => setPwd({ ...pwd, confirmPassword: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="submit"
+                    disabled={changing}
+                    className="px-5 py-2 rounded-lg bg-(--accent-violet) text-white hover:opacity-90 disabled:opacity-60"
+                  >
+                    {changing ? <span className="inline-flex items-center gap-2"><Loader2 className="animate-spin" size={16}/> Cambiando</span> : "Cambiar contraseña"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("view")}
+                    className="px-5 py-2 rounded-lg bg-white/10 text-(--text-primary) hover:bg-white/15"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            )}
+          </main>
         </section>
       </div>
     </div>
+  );
+}
+
+/* ------- UI helpers ------- */
+function Field({ label, value }) {
+  return (
+    <div className="min-w-0">
+      <label className="text-sm text-(--text-gray) mb-1 block">{label}</label>
+      <div className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white truncate">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function Input({ label, type = "text", value, onChange }) {
+  return (
+    <label className="block min-w-0">
+      <span className="text-sm text-(--text-gray) mb-1 block">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white outline-none
+                   focus:border-(--accent-violet) transition"
+      />
+    </label>
   );
 }

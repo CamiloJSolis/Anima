@@ -2,46 +2,68 @@
 import axios from "axios";
 
 export const api = axios.create({
-  // si configuras VITE_API_BASE, la usa; si no, cae al localhost:4000
-  baseURL: import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:4000",
+  baseURL: "http://127.0.0.1:4000",
   withCredentials: true,
 });
 
-/* ------------------------- Auth helpers ------------------------- */
-export const apiGetMe = async () => {
-  const r = await api.get("/auth/me");
-  return r.data?.user ?? null;
-};
+/* --------- Auth (sesión) --------- */
+export const apiGetMe = async () => (await api.get("/auth/me")).data;
+export const apiLogout = async () => (await api.post("/auth/logout")).data;
 
-export const apiLogout = async () => {
-  // limpia cookie httpOnly en el backend
-  await api.post("/auth/logout");
-};
-
-/* ------------------- Spotify: carrusel de tracks ------------------- */
+/* --------- Spotify (ticker carrusel) --------- */
 export const getSpotifyTopTracks = async () => {
   const { data } = await api.get("/auth/spotify/top-tracks");
-  return data?.tracks ?? []; // array de { id, name, artists, image, url }
+  return data.tracks; // [{ id, name, artists, image, url }]
 };
 
-
-// Historial y resumen (si no los tienes ya como helpers)
-export const getRecommendationHistory = async (page = 1, limit = 20) => {
-  const { data } = await api.get(`/recommendations/history`, { params: { page, limit } });
-  return data;
+/* --------- Historial / Resumen --------- */
+export const getRecommendationHistory = async (
+  { page = 1, limit = 20, emotion, sort = "recent" } = {}
+) => {
+  const params = { page, limit, sort };
+  if (emotion) params.emotion = emotion;
+  const { data } = await api.get("/recommendations/history", { params });
+  return data || [];
 };
 
 export const getWeeklySummary = async () => {
-  const { data } = await api.get(`/recommendations/weekly-summary`);
+  const { data } = await api.get("/recommendations/weekly-summary");
+  return data || null;
+};
+
+/* --------- Resolver tracks por IDs (para tarjetas expandibles) --------- */
+export const getSpotifyTracksByIds = async (ids = []) => {
+  if (!ids.length) return [];
+  try {
+    // Implementa este endpoint en backend: GET /auth/spotify/tracks?ids=1,2,3
+    const { data } = await api.get("/auth/spotify/tracks", {
+      params: { ids: ids.join(",") },
+    });
+    return Array.isArray(data?.tracks) ? data.tracks : [];
+  } catch {
+    // Fallback (no rompe la UI)
+    return ids.map((id) => ({
+      id,
+      name: "Track",
+      artists: "",
+      image: "/placeholder.jpg",
+      url: `https://open.spotify.com/track/${id}`,
+    }));
+  }
+};
+
+/* --------- Perfil --------- */
+export const updateProfile = async (payload) => {
+  // Esperado en backend: PUT /users/me  ->  { user }
+  const { data } = await api.put("/users/me", payload);
   return data;
 };
 
-// Resolver varios tracks por IDs (usa el endpoint nuevo)
-export const getSpotifyTracksByIds = async (ids = [], market = 'MX') => {
-  if (!Array.isArray(ids) || ids.length === 0) return [];
-  const { data } = await api.get(`/auth/spotify/tracks`, {
-    params: { ids: ids.join(','), market }
+export const changePassword = async ({ currentPassword, newPassword }) => {
+  // Esperado en backend: POST /users/change-password  -> { ok: true }
+  const { data } = await api.post("/users/change-password", {
+    currentPassword,
+    newPassword,
   });
-  return data.tracks || [];
+  return data;
 };
-

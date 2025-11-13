@@ -1,58 +1,56 @@
 // /frontend/src/services/auth.jsx
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useState, useContext, useEffect } from "react";
 import { apiGetMe, apiLogout } from "./api.js";
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // carga inicial
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Cargar sesión al montar
+  // Se ejecuta una vez al montar: intenta recuperar la sesión del backend
   useEffect(() => {
+    let alive = true;
     (async () => {
       try {
-        const me = await apiGetMe();
-        setUser(me);
+        const data = await apiGetMe(); // GET /auth/me
+        if (!alive) return;
+        if (data?.user) {
+          setIsAuthenticated(true);
+          setUser(data.user);
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
+        }
       } catch {
+        if (!alive) return;
+        setIsAuthenticated(false);
         setUser(null);
       } finally {
-        setLoading(false);
+        if (alive) setIsLoading(false);
       }
     })();
+    return () => { alive = false; };
   }, []);
 
-  const isAuthenticated = !!user;
-
-  const refreshUser = async () => {
-    const me = await apiGetMe();
-    setUser(me);
-    return me;
-  };
-
   const login = (userData) => {
-    // útil si en algún punto haces login con formulario y recibes el user
+    setIsAuthenticated(true);
     setUser(userData);
   };
 
   const logout = async () => {
-    try {
-      await apiLogout();
-    } finally {
+    try { await apiLogout(); } finally {
+      setIsAuthenticated(false);
       setUser(null);
     }
   };
 
-  const value = {
-    user,
-    loading,
-    isAuthenticated,
-    refreshUser,
-    login,
-    logout,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+  return (
+    <AuthContext.Provider value={{ isAuthenticated, user, isLoading, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
 export const useAuth = () => useContext(AuthContext);
